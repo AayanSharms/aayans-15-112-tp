@@ -1,11 +1,17 @@
 from cmu_graphics import *
+from tkinter import filedialog
 from PIL import Image
 
 
-# opening image and converting to rgb format (no need for alpha value)
-rawImg = Image.open("/Users/aayansharma/Documents/aayans-15-112-m26-tp/Images:Assets/landscape test image.png")
-rgbImg = rawImg.convert("RGB")
 
+path = filedialog.askopenfilename(
+    title="Select an image",
+    filetypes=[("Image files", "*.png")]
+)
+
+# opening image and converting to rgb format (no need for alpha value)
+rawImg = Image.open(path)
+rgbImg = rawImg.convert("RGB")
 # image meta data
 imgWidth = rawImg.width
 imgHeight = rawImg.height
