@@ -2,29 +2,30 @@ from cmu_graphics import *
 from tkinter import filedialog
 from PIL import Image
 
+def loadImage():
+    path = filedialog.askopenfilename(
+        title="Select an image",
+        filetypes=[("Image files", "*.png")]
+    )
 
-
-path = filedialog.askopenfilename(
-    title="Select an image",
-    filetypes=[("Image files", "*.png")]
-)
-
-# opening image and converting to rgb format (no need for alpha value)
-rawImg = Image.open(path)
-rgbImg = rawImg.convert("RGB")
-# image meta data
-imgWidth = rawImg.width
-imgHeight = rawImg.height
-imgData = list(rgbImg.getdata())
+    # opening image and converting to rgb format (no need for alpha value)
+    rawImg = Image.open(path)
+    rgbImg = rawImg.convert("RGB")
+    # image meta data
+    imgWidth = rawImg.width
+    imgHeight = rawImg.height
+    imgData = list(rgbImg.getdata())
+    return PhotoData(imgWidth, imgHeight, imgData, rgbImg)
 
 
 # constructing class for image
 class PhotoData:
-    def __init__(self, width, height, pixelData):
+    def __init__(self, width, height, pixelData, rgbImg):
         self.width = width
         self.height = height
         self.pixelData = pixelData
         self.pixelGrid = []
+        self.rgbImg = rgbImg
         self.transformPixelData()
 
     # convert into 2d list for processing 
@@ -35,12 +36,7 @@ class PhotoData:
             startingPoint = self.width + startingPoint
             self.pixelGrid.append(temp)
 
-
-firstImg = PhotoData(imgWidth, imgHeight, imgData)
-
-# puts it into a text file for testing purposes, EXEMPT CODE -- simply for testing purposes
-with open("/Users/aayansharma/Documents/aayans-15-112-m26-tp/Outputs/grid_output.txt", "w") as f:
-    f.write(str(firstImg.pixelGrid))      
+  
 
 
 
