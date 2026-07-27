@@ -67,6 +67,21 @@ def applyBrightnessAdjustment(newPixelGrid, originalPixelGrid, amount):
             newPixelGrid[row][col] = boundBrightness(R, amount), boundBrightness(G, amount), boundBrightness(B, amount)
     return newPixelGrid
 
+
+
+def applyContrast(pixelGrid, originalPixelGrid, alpha): 
+    rows, cols = len(pixelGrid), len(pixelGrid[0])
+    for row in range(rows):
+        for col in range(cols):
+            R, G, B = originalPixelGrid[row][col]
+            pixelGrid[row][col] = applyContrastToChannel(R, alpha), applyContrastToChannel(G, alpha), applyContrastToChannel(B, alpha)
+    return pixelGrid
+
+def applyContrastToChannel(val, alpha):
+    updatedVal = (val - 128) * alpha + 128
+    return rounded(bound(updatedVal))
+    
+
 def boundBrightness(val, amount):
     if val + amount < 0:
         val = 0
@@ -76,22 +91,14 @@ def boundBrightness(val, amount):
         val += amount
     return val
 
-def applyContrast(pixelGrid, originalPixelGrid, k): # S curve tone mapping algorithm, more visually appealing 
-    rows, cols = len(pixelGrid), len(pixelGrid[0])
-    for row in range(rows):
-        for col in range(cols):
-            R, G, B = originalPixelGrid[row][col]
-            pixelGrid[row][col] = applyContrastToChannel(R, k), applyContrastToChannel(G, k), applyContrastToChannel(B, k)
-    return pixelGrid
-
-def applyContrastToChannel(val, k):
-    # normalize
-    x = val/255
-    output = 1/(1+math.e**(-k*(x-0.5)))
-    output *= 255
-    return rounded(output)
-
-
+def bound(val):
+    if val > 255:
+        val = 255
+    elif val < 0:
+        val = 0
+    else:
+        return val
+    return val
 
 
 def syncImage(photo):

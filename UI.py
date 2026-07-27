@@ -1,5 +1,6 @@
 from cmu_graphics import *
 import pixel_image
+import AdjustmentSidebar
 
 
 def onAppStart(app):
@@ -7,6 +8,7 @@ def onAppStart(app):
     app.cmuImage = None
     app.startScreen = True
     app.editScreen = False
+    app.font = 'montserrat'
 
     # button attributes
     app.buttonOpacity = 20
@@ -14,9 +16,11 @@ def onAppStart(app):
     app.buttonY = app.height//2
     app.buttonWidth = 250
     app.buttonHeight = 100
-    app.brightness = 0
 
-    app.contrastK = 4
+    app.adjustmentSidebar = AdjustmentSidebar.Sidebar(app, "Basic Adjustments")
+
+    app.brightness = 0
+    app.contrastAlpha = 1
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill = rgb(30, 30, 30)) # background
@@ -28,41 +32,33 @@ def redrawAll(app):
 def drawTitle(app):
     color = rgb(255, 255, 255)
     bW = 2
-    font = 'montserrat'
-    drawLabel("PyPhoto Editor", 20, 20, size=25, align='top-left', fill=color, font=font, bold=True, border = color, borderWidth = bW)
-
+    drawLabel("PyPhoto Editor", 20, 20, size=25, align='top-left', fill=color, font=app.font, bold=True, border = color, borderWidth = bW)
 
 def loadStartScreen(app):
     openX = app.buttonX
     openY = app.buttonY
     color = rgb(255, 255, 255)
     bW = 2
-    font = 'montserrat'
     drawRect(openX, openY, app.buttonWidth, app.buttonHeight, align='center', border = 'gray', borderWidth = bW*4, fill = rgb(100, 100, 100), opacity = app.buttonOpacity)
     drawTitle(app)
-    drawLabel("Open", openX, openY, size=40, fill = color, align='center', font=font, bold=True, border = color, borderWidth = bW)
+    drawLabel("Open", openX, openY, size=40, fill = color, align='center', font=app.font, bold=True, border = color, borderWidth = bW)
 
 def loadEditScreen(app):
     drawTitle(app)
+    app.adjustmentSidebar.drawSidebar(app)
     drawImage(app.cmuImage, app.width//2, app.height//2, align = 'center')
 
-def applyBrightness(app, amount):
-    if app.editScreen:
-        pixel_image.applyBrightnessAdjustment(app.photo.pixelGrid, app.photo.originalPixelGrid, amount)
-        applyEdits(app)
 
-def applyContrast(app, k):
-    if app.editScreen:
-        pixel_image.applyContrast(app.photo.pixelGrid, app.photo.originalPixelGrid, k)
-        applyEdits(app)
 
-def applyEdits(app):
-    pixel_image.syncImage(app.photo)
-    app.cmuImage = CMUImage(app.photo.rgbImg)
+#  ----- Event Handlers -------
 
 def onKeyPress(app, key):
     if key == "up":
-        pass
+        app.contrastAlpha += 0.2
+        applyContrast(app, app.contrastAlpha)
+    elif key == 'down':
+        app.contrastAlpha -= 0.2
+        applyContrast(app, app.contrastAlpha)
 
 
 
@@ -83,6 +79,23 @@ def onMousePress(app, mouseX, mouseY):
                 app.cmuImage = CMUImage(app.photo.rgbImg)
                 app.startScreen = False
                 app.editScreen = True
+
+
+# ------ Editing functions -----
+def applyBrightness(app, amount):
+    if app.editScreen:
+        pixel_image.applyBrightnessAdjustment(app.photo.pixelGrid, app.photo.originalPixelGrid, amount)
+        applyEdits(app)
+
+def applyContrast(app, alpha):
+    if app.editScreen:
+        alpha = app.contrastAlpha
+        pixel_image.applyContrast(app.photo.pixelGrid, app.photo.originalPixelGrid, alpha)
+        applyEdits(app)
+
+def applyEdits(app):
+    pixel_image.syncImage(app.photo)
+    app.cmuImage = CMUImage(app.photo.rgbImg)
 
 
 def main():
