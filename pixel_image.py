@@ -4,6 +4,7 @@ import sys
 from PIL import Image
 import math
 import copy
+import convolution
 
 # NOT PART OF GRADED ALGORITHMIC CODE -- exempt from grading.
 # tkinter's file dialog cannot run in the same process as cmu_graphics'
@@ -68,6 +69,14 @@ def applyBrightnessAdjustment(newPixelGrid, originalPixelGrid, amount):
             newPixelGrid[row][col] = boundBrightness(R, amount), boundBrightness(G, amount), boundBrightness(B, amount)
     return newPixelGrid
 
+def boundBrightness(val, amount):
+    if val + amount < 0:
+        val = 0
+    elif val + amount > 255:
+        val = 255
+    else:
+        val += amount
+    return val
 
 
 def applyContrast(pixelGrid, originalPixelGrid, alpha): 
@@ -78,19 +87,35 @@ def applyContrast(pixelGrid, originalPixelGrid, alpha):
             pixelGrid[row][col] = applyContrastToChannel(R, alpha), applyContrastToChannel(G, alpha), applyContrastToChannel(B, alpha)
     return pixelGrid
 
+
 def applyContrastToChannel(val, alpha):
     updatedVal = (val - 128) * alpha + 128 # 
     return rounded(bound(updatedVal))
     
+def applyGaussianBlur(newPixelGrid, originalPixelGrid, size):
+    rows, cols = len(newPixelGrid), len(newPixelGrid[0])
+    gaussianKernel = convolution.constructGaussianKernel(size)
+    for row in range(rows):
+        for col in range(cols):
+            R, G, B = originalPixelGrid[row][col]
+            newPixelGrid[row][col] = (applyBlurToChannel(0, row, col, originalPixelGrid, gaussianKernel), 
+                                    applyBlurToChannel(1, row, col, originalPixelGrid, gaussianKernel), 
+                                    applyBlurToChannel(2, row, col, originalPixelGrid, gaussianKernel))
+    return newPixelGrid
 
-def boundBrightness(val, amount):
-    if val + amount < 0:
-        val = 0
-    elif val + amount > 255:
-        val = 255
-    else:
-        val += amount
-    return val
+def applyBlurToChannel(channelIndex, row, col, originalPixelGrid, kernel):
+    size = len(kernel)
+    total = 0
+    for ky in range(size):
+        for kx in range(size):
+            half = size//2
+            xOffset, yOffset = kx - half, ky - half
+            xPos, yPos = col + xOffset, row+yOffset
+            total += kernel[ky][kx] * originalPixelGrid[yPos][xPos][channelIndex]
+    return total
+
+
+
 
 def bound(val):
     if val > 255:
