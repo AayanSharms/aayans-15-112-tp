@@ -25,27 +25,32 @@ class Sidebar:
         sideBarColor = rgb(45, 45, 45)
         borderColor = rgb(100, 100, 100)
         drawRect(self.left, self.top, self.width, self.height, fill = sideBarColor, borderWidth = 4, border = borderColor)
-        drawLabel(self.title, self.centerX, self.top+50, fill = 'white', font = app.font, bold = True, size = 20, borderWidth = 1, border = 'white')
+        drawLabel(self.title, self.centerX, self.top+50, fill = 'white', font = app.font, bold = True, size = 25, borderWidth = 1, border = 'white')
         for slider in self.sliders:
-            slider.drawSliderLine(app)
+            slider.drawSlider(app)
 
 class Slider:
     def __init__(self, app, name, x, y, sidebarWidth):
         self.name = name
-        self.x = x
+
+        self.x = x 
         self.y = y
+
+        self.cx = x
+        self.cy = y + 25
+        self.circleRadius = 8
+
         self.lineLength = (sidebarWidth - 70)//2
         self.start = self.x - self.lineLength
         self.end = self.x+self.lineLength
-        self.circleRadius = 8
     def updateSliderPosition(self, x, sidebarWidth):
         self.x = x
         self.lineLength = (sidebarWidth - 70)//2
         self.start = self.x - self.lineLength
         self.end = self.x + self.lineLength
-    def drawSliderLine(self, app):
-        drawLabel(self.name, self.x, self.y, size = 10, font = app.font, fill = 'white')
+    def drawSlider(self, app):
+        drawLabel(self.name, self.x, self.y, size = 18, font = app.font, fill = 'white')
         drawLine(self.start, self.y + 25, self.end, self.y + 25, fill = 'white', lineWidth = 2)
-        drawCircle(self.x, self.y+25, self.circleRadius, fill = rgb(200, 200, 200))
+        drawCircle(self.cx, self.cy, self.circleRadius, fill = rgb(200, 200, 200))
 
 

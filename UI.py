@@ -18,6 +18,7 @@ def onAppStart(app):
     app.buttonHeight = 100
 
     app.adjustmentSidebar = AdjustmentSidebar.Sidebar(app, "Basic Adjustments")
+    app.draggingSlider = None
 
     app.brightness = 0
     app.contrastAlpha = 1
@@ -49,7 +50,6 @@ def loadEditScreen(app):
     drawImage(app.cmuImage, app.width//2, app.height//2, align = 'center')
 
 
-
 #  ----- Event Handlers -------
 
 def onKeyPress(app, key):
@@ -63,11 +63,12 @@ def onKeyPress(app, key):
 
 
 def onMouseMove(app, mouseX, mouseY):
-    if (app.buttonX - app.buttonWidth/2 <= mouseX <= app.buttonX + app.buttonWidth/2 
-        and app.buttonY - app.buttonHeight/2 <= mouseY <= app.buttonY + app.buttonHeight/2):
-        app.buttonOpacity = 80
-    else:
-        app.buttonOpacity = 20
+    if app.startScreen:
+        if (app.buttonX - app.buttonWidth/2 <= mouseX <= app.buttonX + app.buttonWidth/2 
+            and app.buttonY - app.buttonHeight/2 <= mouseY <= app.buttonY + app.buttonHeight/2):
+            app.buttonOpacity = 80
+        else:
+            app.buttonOpacity = 20
 
 def onMousePress(app, mouseX, mouseY):
     if app.startScreen:
@@ -80,6 +81,31 @@ def onMousePress(app, mouseX, mouseY):
                 app.startScreen = False
                 app.editScreen = True
 
+    if app.editScreen:
+        for slider in app.adjustmentSidebar.sliders:
+            if (slider.cx - slider.circleRadius <= mouseX <= slider.cx + slider.circleRadius and 
+                slider.cy - slider.circleRadius <= mouseY <= slider.cy + slider.circleRadius):
+                app.draggingSlider = slider
+
+                
+
+def onMouseDrag(app, mouseX, mouseY):
+    if app.editScreen and app.draggingSlider != None:
+        currSlider = app.draggingSlider
+        currSlider.cx = max(currSlider.start, min(currSlider.end, mouseX))
+
+        if currSlider.name == "Brightness":
+            sliderValue = applySliderValue(app, currSlider)
+            applyBrightness(app, sliderValue)
+        if currSlider.name == "Contrast":
+            sliderValue = applySliderValue(app, currSlider)
+            applyContrast(app, sliderValue)
+
+def onMouseRelease(app, mouseX, mouseY):
+    app.draggingSlider = None
+
+
+
 
 # ------ Editing functions -----
 def applyBrightness(app, amount):
@@ -89,9 +115,20 @@ def applyBrightness(app, amount):
 
 def applyContrast(app, alpha):
     if app.editScreen:
-        alpha = app.contrastAlpha
+        app.contrastAlpha = alpha
         pixel_image.applyContrast(app.photo.pixelGrid, app.photo.originalPixelGrid, alpha)
         applyEdits(app)
+
+def applySliderValue(app, slider):
+    if slider.name == "Brightness":
+        percent = (slider.cx - slider.start) / (slider.end - slider.start)
+        amount = -255 + percent * 510
+        return rounded(amount)
+    if slider.name == "Contrast":
+        percent = (slider.cx - slider.start) / (slider.end - slider.start)
+        alpha = 0 + percent*2
+        return alpha
+
 
 def applyEdits(app):
     pixel_image.syncImage(app.photo)

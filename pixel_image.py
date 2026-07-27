@@ -59,6 +59,7 @@ class PhotoData:
 # KNOWN LIMITATION - bounding brightness is lossy, reversing a brightness change
 # that has been bounded will not restore the original value
 # something to keep in mind and possibly try and fix
+# LIMITATION FIXED ^^^ Added logic to only edit the original image, not edit the edited image
 def applyBrightnessAdjustment(newPixelGrid, originalPixelGrid, amount):
     rows, cols = len(newPixelGrid), len(newPixelGrid[0])
     for row in range(rows):
@@ -78,7 +79,7 @@ def applyContrast(pixelGrid, originalPixelGrid, alpha):
     return pixelGrid
 
 def applyContrastToChannel(val, alpha):
-    updatedVal = (val - 128) * alpha + 128
+    updatedVal = (val - 128) * alpha + 128 # 
     return rounded(bound(updatedVal))
     
 
@@ -101,6 +102,7 @@ def bound(val):
     return val
 
 
+# syncs image
 def syncImage(photo):
     rows, cols = len(photo.pixelGrid), len(photo.pixelGrid[0])
     flattened = []
