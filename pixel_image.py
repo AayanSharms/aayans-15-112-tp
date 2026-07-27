@@ -39,8 +39,8 @@ class PhotoData:
     def __init__(self, width, height, pixelData, rgbImg):
         self.width = width
         self.height = height
-        self.pixelData = pixelData
-        self.pixelGrid = []
+        self.pixelData = pixelData #1d list of tuples
+        self.pixelGrid = [] #2d list of tuples
         self.rgbImg = rgbImg
         self.transformPixelData()
 
@@ -53,7 +53,36 @@ class PhotoData:
             self.pixelGrid.append(temp)
 
   
+def applyBrightnessAdjustment(pixelGrid, amount):
+    rows, cols = len(pixelGrid), len(pixelGrid[0])
+    for row in range(rows):
+        for col in range(cols):
+            R, G, B = pixelGrid[row][col]
+            pixelGrid[row][col] = boundBrightness(R, amount), boundBrightness(G, amount), boundBrightness(B, amount)
+    return pixelGrid
 
+def boundBrightness(val, amount):
+    if val + amount < 0:
+        val = 0
+    elif val + amount > 255:
+        val = 255
+    else:
+        val += amount
+    return val
+
+def syncImage(photo):
+    rows, cols = len(photo.pixelGrid), len(photo.pixelGrid[0])
+    flattened = []
+    for row in range(rows):
+        for col in range(cols):
+            flattened.append(photo.pixelGrid[row][col])
+    photo.pixelData = flattened
+    photo.height = rows
+    photo.width = cols
+    editedImg = Image.new('RGB', (photo.width, photo.height))
+    editedImg.putdata(photo.pixelData)
+    photo.rgbImg = editedImg
+    return photo.pixelData
 
 
 

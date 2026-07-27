@@ -43,6 +43,18 @@ def loadEditScreen(app):
     drawTitle(app)
     drawImage(app.cmuImage, app.width//2, app.height//2, align = 'center')
 
+def applyBrightness(app, amount):
+    if app.editScreen:
+        pixel_image.applyBrightnessAdjustment(app.photo.pixelGrid, amount)
+        pixel_image.syncImage(app.photo)
+        app.cmuImage = CMUImage(app.photo.rgbImg)
+
+def onKeyPress(app, key):
+    if key == "up":
+        applyBrightness(app, 20)
+    if key == "down":
+        applyBrightness(app, -20)
+
 
 
 def onMouseMove(app, mouseX, mouseY):
@@ -58,7 +70,7 @@ def onMousePress(app, mouseX, mouseY):
         photo = pixel_image.loadImage()
         if photo is not None:  # None means the user cancelled the file dialog
             app.photo = photo
-            app.cmuImage = CMUImage(photo.rgbImg)
+            app.cmuImage = CMUImage(app.photo.rgbImg)
             app.startScreen = False
             app.editScreen = True
 
