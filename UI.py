@@ -15,6 +15,8 @@ def onAppStart(app):
     app.buttonWidth = 250
     app.buttonHeight = 100
 
+    app.contrastK = 0.5
+
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill = rgb(30, 30, 30)) # background
     if app.startScreen:
@@ -46,14 +48,25 @@ def loadEditScreen(app):
 def applyBrightness(app, amount):
     if app.editScreen:
         pixel_image.applyBrightnessAdjustment(app.photo.pixelGrid, amount)
-        pixel_image.syncImage(app.photo)
-        app.cmuImage = CMUImage(app.photo.rgbImg)
+        applyEdits(app)
+
+def applyContrast(app):
+    if app.editScreen:
+        k = app.contrastK
+        pixel_image.applyContrast(app.photo.pixelGrid, k)
+        applyEdits(app)
+
+
+
+def applyEdits(app):
+    pixel_image.syncImage(app.photo)
+    app.cmuImage = CMUImage(app.photo.rgbImg)
 
 def onKeyPress(app, key):
     if key == "up":
-        applyBrightness(app, 20)
-    if key == "down":
-        applyBrightness(app, -20)
+        app.contrastK += 0.2
+        applyContrast(app)
+    
 
 
 
@@ -65,14 +78,15 @@ def onMouseMove(app, mouseX, mouseY):
         app.buttonOpacity = 20
 
 def onMousePress(app, mouseX, mouseY):
-    if (app.buttonX - app.buttonWidth/2 <= mouseX <= app.buttonX + app.buttonWidth/2
-            and app.buttonY - app.buttonHeight/2 <= mouseY <= app.buttonY + app.buttonHeight/2):
-        photo = pixel_image.loadImage()
-        if photo is not None:  # None means the user cancelled the file dialog
-            app.photo = photo
-            app.cmuImage = CMUImage(app.photo.rgbImg)
-            app.startScreen = False
-            app.editScreen = True
+    if app.startScreen:
+        if (app.buttonX - app.buttonWidth/2 <= mouseX <= app.buttonX + app.buttonWidth/2
+                and app.buttonY - app.buttonHeight/2 <= mouseY <= app.buttonY + app.buttonHeight/2):
+            photo = pixel_image.loadImage()
+            if photo is not None:  # None means the user cancelled the file dialog
+                app.photo = photo
+                app.cmuImage = CMUImage(app.photo.rgbImg)
+                app.startScreen = False
+                app.editScreen = True
 
 
 def main():

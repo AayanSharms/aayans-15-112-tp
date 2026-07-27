@@ -2,6 +2,7 @@ from cmu_graphics import *
 import subprocess
 import sys
 from PIL import Image
+import math
 
 # NOT PART OF GRADED ALGORITHMIC CODE -- exempt from grading.
 # tkinter's file dialog cannot run in the same process as cmu_graphics'
@@ -52,7 +53,9 @@ class PhotoData:
             startingPoint = self.width + startingPoint
             self.pixelGrid.append(temp)
 
-  
+# KNOWN LIMITATION - bounding brightness is lossy, reversing a brightness change
+# that has been bounded will not restore the original value
+# something to keep in mind and possibly try and fix
 def applyBrightnessAdjustment(pixelGrid, amount):
     rows, cols = len(pixelGrid), len(pixelGrid[0])
     for row in range(rows):
@@ -69,6 +72,24 @@ def boundBrightness(val, amount):
     else:
         val += amount
     return val
+
+def applyContrast(pixelGrid, k): # S curve tone mapping algorithm, more visually appealing 
+    rows, cols = len(pixelGrid), len(pixelGrid[0])
+    for row in range(rows):
+        for col in range(cols):
+            R, G, B = pixelGrid[row][col]
+            pixelGrid[row][col] = applyContrastToChannel(R, k), applyContrastToChannel(G, k), applyContrastToChannel(B, k)
+    return pixelGrid
+
+def applyContrastToChannel(val, k):
+    # normalize
+    x = val/255
+    output = 1/(1+math.e**(-k*(x-0.5)))
+    output *= 255
+    return rounded(output)
+
+
+
 
 def syncImage(photo):
     rows, cols = len(photo.pixelGrid), len(photo.pixelGrid[0])
