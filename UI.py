@@ -4,6 +4,7 @@ import pixel_image
 
 def onAppStart(app):
     app.image = None
+    app.cmuImage = None
     app.startScreen = True
     app.editScreen = False
 
@@ -40,6 +41,7 @@ def loadStartScreen(app):
 
 def loadEditScreen(app):
     drawTitle(app)
+    drawImage(app.cmuImage, app.width//2, app.height//2, align = 'center')
 
 
 
@@ -56,12 +58,9 @@ def onMousePress(app, mouseX, mouseY):
         photo = pixel_image.loadImage()
         if photo is not None:  # None means the user cancelled the file dialog
             app.photo = photo
+            app.cmuImage = CMUImage(photo.rgbImg)
             app.startScreen = False
             app.editScreen = True
-        
-
-
-
 
 
 def main():
