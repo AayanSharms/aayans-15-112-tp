@@ -14,8 +14,9 @@ def onAppStart(app):
     app.buttonY = app.height//2
     app.buttonWidth = 250
     app.buttonHeight = 100
+    app.brightness = 0
 
-    app.contrastK = 0.5
+    app.contrastK = 4
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill = rgb(30, 30, 30)) # background
@@ -47,16 +48,13 @@ def loadEditScreen(app):
 
 def applyBrightness(app, amount):
     if app.editScreen:
-        pixel_image.applyBrightnessAdjustment(app.photo.pixelGrid, amount)
+        pixel_image.applyBrightnessAdjustment(app.photo.pixelGrid, app.photo.originalPixelGrid, amount)
         applyEdits(app)
 
-def applyContrast(app):
+def applyContrast(app, k):
     if app.editScreen:
-        k = app.contrastK
-        pixel_image.applyContrast(app.photo.pixelGrid, k)
+        pixel_image.applyContrast(app.photo.pixelGrid, app.photo.originalPixelGrid, k)
         applyEdits(app)
-
-
 
 def applyEdits(app):
     pixel_image.syncImage(app.photo)
@@ -64,9 +62,7 @@ def applyEdits(app):
 
 def onKeyPress(app, key):
     if key == "up":
-        app.contrastK += 0.2
-        applyContrast(app)
-    
+        pass
 
 
 
@@ -90,8 +86,8 @@ def onMousePress(app, mouseX, mouseY):
 
 
 def main():
-    width = 1920
-    height = 1080
+    width = 1280
+    height = 720
     runApp(width=width, height=height)
 
 main()

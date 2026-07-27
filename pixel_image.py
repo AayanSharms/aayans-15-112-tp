@@ -3,6 +3,7 @@ import subprocess
 import sys
 from PIL import Image
 import math
+import copy
 
 # NOT PART OF GRADED ALGORITHMIC CODE -- exempt from grading.
 # tkinter's file dialog cannot run in the same process as cmu_graphics'
@@ -44,6 +45,8 @@ class PhotoData:
         self.pixelGrid = [] #2d list of tuples
         self.rgbImg = rgbImg
         self.transformPixelData()
+        self.originalPixelGrid = copy.deepcopy(self.pixelGrid)
+
 
     # convert into 2d list for processing 
     def transformPixelData(self):
@@ -56,13 +59,13 @@ class PhotoData:
 # KNOWN LIMITATION - bounding brightness is lossy, reversing a brightness change
 # that has been bounded will not restore the original value
 # something to keep in mind and possibly try and fix
-def applyBrightnessAdjustment(pixelGrid, amount):
-    rows, cols = len(pixelGrid), len(pixelGrid[0])
+def applyBrightnessAdjustment(newPixelGrid, originalPixelGrid, amount):
+    rows, cols = len(newPixelGrid), len(newPixelGrid[0])
     for row in range(rows):
         for col in range(cols):
-            R, G, B = pixelGrid[row][col]
-            pixelGrid[row][col] = boundBrightness(R, amount), boundBrightness(G, amount), boundBrightness(B, amount)
-    return pixelGrid
+            R, G, B = originalPixelGrid[row][col]
+            newPixelGrid[row][col] = boundBrightness(R, amount), boundBrightness(G, amount), boundBrightness(B, amount)
+    return newPixelGrid
 
 def boundBrightness(val, amount):
     if val + amount < 0:
@@ -73,11 +76,11 @@ def boundBrightness(val, amount):
         val += amount
     return val
 
-def applyContrast(pixelGrid, k): # S curve tone mapping algorithm, more visually appealing 
+def applyContrast(pixelGrid, originalPixelGrid, k): # S curve tone mapping algorithm, more visually appealing 
     rows, cols = len(pixelGrid), len(pixelGrid[0])
     for row in range(rows):
         for col in range(cols):
-            R, G, B = pixelGrid[row][col]
+            R, G, B = originalPixelGrid[row][col]
             pixelGrid[row][col] = applyContrastToChannel(R, k), applyContrastToChannel(G, k), applyContrastToChannel(B, k)
     return pixelGrid
 
