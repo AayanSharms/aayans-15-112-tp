@@ -4,7 +4,7 @@ import AdjustmentSidebar
 
 
 def onAppStart(app):
-    app.image = None
+    app.photo = None
     app.cmuImage = None
     app.startScreen = True
     app.editScreen = False
@@ -22,7 +22,7 @@ def onAppStart(app):
 
     app.brightness = 0
     app.contrastAlpha = 1
-    app.blurSize = 25
+    app.blurSize = 3
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill = rgb(30, 30, 30)) # background
@@ -34,7 +34,7 @@ def redrawAll(app):
 def drawTitle(app):
     color = rgb(255, 255, 255)
     bW = 2
-    drawLabel("PyPhoto Editor", 20, 20, size=25, align='top-left', fill=color, font=app.font, bold=True, border = color, borderWidth = bW)
+    drawLabel("PyPhoto Editor", 20, 20, size=25, align='top-left', fill=color, font=app.font, bold=True)
 
 def loadStartScreen(app):
     openX = app.buttonX
@@ -43,12 +43,25 @@ def loadStartScreen(app):
     bW = 2
     drawRect(openX, openY, app.buttonWidth, app.buttonHeight, align='center', border = 'gray', borderWidth = bW*4, fill = rgb(100, 100, 100), opacity = app.buttonOpacity)
     drawTitle(app)
-    drawLabel("Open", openX, openY, size=40, fill = color, align='center', font=app.font, bold=True, border = color, borderWidth = bW)
+    drawLabel("Open", openX, openY, size=40, fill = color, align='center', font=app.font, bold=True)
 
 def loadEditScreen(app):
     drawTitle(app)
     app.adjustmentSidebar.drawSidebar(app)
-    drawImage(app.cmuImage, app.width//2, app.height//2, align = 'center')
+
+    sidebarWidth = app.adjustmentSidebar.width
+    margin = 80
+    sidebarHeight = app.adjustmentSidebar.height
+    availableWidth = app.width - (2*sidebarWidth)- margin
+    availableHeight = app.height - margin
+
+    widthRatio = availableWidth/app.photo.width
+    heightRatio = availableHeight/app.photo.height
+    scaleFactor = min(widthRatio, heightRatio)
+
+
+
+    drawImage(app.cmuImage, app.width//2, app.height//2, align = 'center', width = app.photo.width * scaleFactor, height = app.photo.height*scaleFactor)
 
 
 #  ----- Event Handlers -------
@@ -56,6 +69,7 @@ def loadEditScreen(app):
 def onKeyPress(app, key):
     if key == "b":
         applyBlur(app, app.blurSize)
+        app.blurSize += 4
 
 
 def onMouseMove(app, mouseX, mouseY):

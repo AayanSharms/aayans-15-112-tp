@@ -17,7 +17,7 @@ def pickImagePath():
         "from tkinter import filedialog, Tk;"
         "root = Tk(); root.withdraw();"
         "print(filedialog.askopenfilename("
-        "title='Select an image', filetypes=[('Image files', '*.png')]))"
+        "title='Select an image', filetypes=[('Image files', '*.png *.jpg *.jpeg')]))"
     )
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
     return result.stdout.strip()
@@ -94,15 +94,41 @@ def applyContrastToChannel(val, alpha):
     
 def applyGaussianBlur(newPixelGrid, originalPixelGrid, size):
     rows, cols = len(newPixelGrid), len(newPixelGrid[0])
-    gaussianKernel = convolution.constructGaussianKernel(size)
+    gaussianKernel = convolution.construct1DGaussianKernel(size)
+    horizontalPass = copy.deepcopy(originalPixelGrid)
     for row in range(rows):
         for col in range(cols):
             if size//2<=row<=rows-1-size//2 and size//2<=col<=cols-1-size//2:
-                R, G, B = originalPixelGrid[row][col]
-                newPixelGrid[row][col] = (applyBlurToChannel(0, row, col, originalPixelGrid, gaussianKernel), 
-                                        applyBlurToChannel(1, row, col, originalPixelGrid, gaussianKernel), 
-                                        applyBlurToChannel(2, row, col, originalPixelGrid, gaussianKernel))
+                horizontalPass[row][col] = (applyHorizontalBlur(0, row, col, originalPixelGrid, gaussianKernel), 
+                                        applyHorizontalBlur(1, row, col, originalPixelGrid, gaussianKernel), 
+                                        applyHorizontalBlur(2, row, col, originalPixelGrid, gaussianKernel))
+
+    for row in range(rows):
+        for col in range(cols):
+            if size//2<=row<=rows-1-size//2 and size//2<=col<=cols-1-size//2:
+                newPixelGrid[row][col] = (applyVerticalBlur(0, row, col, horizontalPass, gaussianKernel), 
+                                            applyVerticalBlur(1, row, col, horizontalPass, gaussianKernel), 
+                                            applyVerticalBlur(2, row, col, horizontalPass, gaussianKernel))
     return newPixelGrid
+
+def applyHorizontalBlur(channelIndex, row, col, pixelGrid, kernel):
+    size = len(kernel)
+    total = 0
+    for k in range(size):
+        offset = k - size//2
+        xPos = col + offset
+        total += kernel[k] * pixelGrid[row][xPos][channelIndex]
+    return rounded(bound(total))
+
+def applyVerticalBlur(channelIndex, row, col, pixelGrid, kernel):
+    size = len(kernel)
+    total = 0
+    for k in range(size):
+        offset = k - size//2
+        yPos = row + offset
+        total += kernel[k] * pixelGrid[yPos][col][channelIndex]
+    return rounded(bound(total))
+    
 
 def applyBlurToChannel(channelIndex, row, col, originalPixelGrid, kernel):
     size = len(kernel)

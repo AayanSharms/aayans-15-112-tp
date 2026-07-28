@@ -25,7 +25,7 @@ class Sidebar:
         sideBarColor = rgb(45, 45, 45)
         borderColor = rgb(100, 100, 100)
         drawRect(self.left, self.top, self.width, self.height, fill = sideBarColor, borderWidth = 4, border = borderColor)
-        drawLabel(self.title, self.centerX, self.top+50, fill = 'white', font = app.font, bold = True, size = 25, borderWidth = 1, border = 'white')
+        drawLabel(self.title, self.centerX, self.top+50, fill = 'white', font = app.font, bold = True, size = 15, borderWidth = 1, border = 'white')
         for slider in self.sliders:
             slider.drawSlider(app)
 
