@@ -22,6 +22,7 @@ def onAppStart(app):
 
     app.brightness = 0
     app.contrastAlpha = 1
+    app.blurSize = 25
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill = rgb(30, 30, 30)) # background
@@ -53,13 +54,8 @@ def loadEditScreen(app):
 #  ----- Event Handlers -------
 
 def onKeyPress(app, key):
-    if key == "up":
-        app.contrastAlpha += 0.2
-        applyContrast(app, app.contrastAlpha)
-    elif key == 'down':
-        app.contrastAlpha -= 0.2
-        applyContrast(app, app.contrastAlpha)
-
+    if key == "b":
+        applyBlur(app, app.blurSize)
 
 
 def onMouseMove(app, mouseX, mouseY):
@@ -117,6 +113,12 @@ def applyContrast(app, alpha):
     if app.editScreen:
         app.contrastAlpha = alpha
         pixel_image.applyContrast(app.photo.pixelGrid, app.photo.originalPixelGrid, alpha)
+        applyEdits(app)
+
+def applyBlur(app, size):
+    if app.editScreen:
+        app.blurSize = size
+        pixel_image.applyGaussianBlur(app.photo.pixelGrid, app.photo.originalPixelGrid, app.blurSize)
         applyEdits(app)
 
 def applySliderValue(app, slider):

@@ -97,10 +97,11 @@ def applyGaussianBlur(newPixelGrid, originalPixelGrid, size):
     gaussianKernel = convolution.constructGaussianKernel(size)
     for row in range(rows):
         for col in range(cols):
-            R, G, B = originalPixelGrid[row][col]
-            newPixelGrid[row][col] = (applyBlurToChannel(0, row, col, originalPixelGrid, gaussianKernel), 
-                                    applyBlurToChannel(1, row, col, originalPixelGrid, gaussianKernel), 
-                                    applyBlurToChannel(2, row, col, originalPixelGrid, gaussianKernel))
+            if size//2<=row<=rows-1-size//2 and size//2<=col<=cols-1-size//2:
+                R, G, B = originalPixelGrid[row][col]
+                newPixelGrid[row][col] = (applyBlurToChannel(0, row, col, originalPixelGrid, gaussianKernel), 
+                                        applyBlurToChannel(1, row, col, originalPixelGrid, gaussianKernel), 
+                                        applyBlurToChannel(2, row, col, originalPixelGrid, gaussianKernel))
     return newPixelGrid
 
 def applyBlurToChannel(channelIndex, row, col, originalPixelGrid, kernel):
@@ -112,7 +113,7 @@ def applyBlurToChannel(channelIndex, row, col, originalPixelGrid, kernel):
             xOffset, yOffset = kx - half, ky - half
             xPos, yPos = col + xOffset, row+yOffset
             total += kernel[ky][kx] * originalPixelGrid[yPos][xPos][channelIndex]
-    return total
+    return rounded(bound(total))
 
 
 
