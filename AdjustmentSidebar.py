@@ -44,10 +44,12 @@ class Slider:
         self.start = self.x - self.lineLength
         self.end = self.x+self.lineLength
     def updateSliderPosition(self, x, sidebarWidth):
+        percent = (self.cx-self.start) / (self.end-self.start)
         self.x = x
         self.lineLength = (sidebarWidth - 70)//2
         self.start = self.x - self.lineLength
         self.end = self.x + self.lineLength
+        self.cx = self.start + percent * (self.end-self.start)
     def drawSlider(self, app):
         drawLabel(self.name, self.x, self.y, size = 18, font = app.font, fill = 'white')
         drawLine(self.start, self.y + 25, self.end, self.y + 25, fill = 'white', lineWidth = 2)

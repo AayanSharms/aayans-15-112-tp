@@ -16,6 +16,7 @@ def onAppStart(app):
     app.buttonY = app.height//2
     app.buttonWidth = 250
     app.buttonHeight = 100
+    app.folderIcon = pixel_image.loadIcon('/Users/aayansharma/Documents/aayans-15-112-m26-tp/Images:Assets/foldericon.png')
 
     app.adjustmentSidebar = AdjustmentSidebar.Sidebar(app, "Basic Adjustments")
     app.draggingSlider = None
@@ -43,7 +44,8 @@ def loadStartScreen(app):
     bW = 2
     drawRect(openX, openY, app.buttonWidth, app.buttonHeight, align='center', border = 'gray', borderWidth = bW*4, fill = rgb(100, 100, 100), opacity = app.buttonOpacity)
     drawTitle(app)
-    drawLabel("Open", openX, openY, size=40, fill = color, align='center', font=app.font, bold=True)
+    drawImage(app.folderIcon, openX-80, openY, align = 'center', width = 40, height =40 )
+    drawLabel("Open", openX+10, openY, size=40, fill = color, align='center', font=app.font, bold=True)
 
 def loadEditScreen(app):
     drawTitle(app)

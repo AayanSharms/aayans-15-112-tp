@@ -169,6 +169,10 @@ def syncImage(photo):
     photo.rgbImg = editedImg
     return photo.pixelData
 
+def loadIcon(path):
+    img = Image.open(path).convert('RGBA')
+    return CMUImage(img)
+
 
 
 
