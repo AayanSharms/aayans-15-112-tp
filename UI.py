@@ -6,7 +6,9 @@ import copy
 actions = {"Brightness": pixel_image.applyBrightnessAdjustment, 
            "Contrast": pixel_image.applyContrast,
            "Blur": pixel_image.applyGaussianBlur,
-           "Saturation": pixel_image.applySaturation}
+           "Saturation": pixel_image.applySaturation, 
+           "Exposure": pixel_image.applyExposure, 
+           "Temperature": pixel_image.applyTemperature}
 
 def onAppStart(app):
     app.photo = None
@@ -34,6 +36,10 @@ def onAppStart(app):
     app.contrastAlpha = 1
     app.blurSize = 15
 
+    app.undoHistory = []
+    app.redoHistory = []
+    app.stateBeforeDrag = None
+
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill = rgb(30, 30, 30)) # background
     if app.startScreen:
@@ -55,6 +61,8 @@ def loadStartScreen(app):
     drawTitle(app)
     drawImage(app.folderIcon, openX-80, openY, align = 'center', width = 40, height =40 )
     drawLabel("Open", openX+10, openY, size=40, fill = color, align='center', font=app.font, bold=True)
+    drawLabel("Press b for blur, press u for undo, r for redo, drag sliders to adjust image", openX+10, openY + 90, size = 30, fill = color, align = 'center', font = app.font, bold = True)
+    drawLabel("Please pick an image around 500x500 (works too slow otherwise)", openX+10, openY + 140, size = 30, fill = color, align = 'center', font = app.font, bold = True)
 
 def loadEditScreen(app):
     drawTitle(app)
@@ -78,22 +86,76 @@ def loadEditScreen(app):
         visibleImage = app.cmuImage
     drawImage(visibleImage, app.width//2, app.height//2, align = 'center', width = app.photo.width * scaleFactor, height = app.photo.height*scaleFactor)
 
+def undo(app):
+    if len(app.undoHistory) == 0:
+        return
+    photo = app.photo
+
+    sliderPositions = []
+    for otherSlider in app.adjustmentSidebar.sliders:
+        sliderPositions.append(otherSlider.cx)
+    app.redoHistory.append((list(photo.editHistory), list(photo.checkpoints), list(photo.proxyCheckpoints), sliderPositions))
+
+    editHistory, checkpoints, proxyCheckpoints, sliderPositions = app.undoHistory.pop()
+    photo.editHistory = editHistory
+    photo.checkpoints = checkpoints
+    photo.proxyCheckpoints = proxyCheckpoints
+    photo.pixelGrid = photo.checkpoints[-1]
+
+    for i in range(len(app.adjustmentSidebar.sliders)):
+        app.adjustmentSidebar.sliders[i].cx = sliderPositions[i]
+
+    applyEdits(app)
+
+def redo(app):
+    if len(app.redoHistory) == 0:
+        return
+    photo = app.photo
+
+    sliderPositions = []
+    for otherSlider in app.adjustmentSidebar.sliders:
+        sliderPositions.append(otherSlider.cx)
+    app.undoHistory.append((list(photo.editHistory), list(photo.checkpoints), list(photo.proxyCheckpoints), sliderPositions))
+
+    editHistory, checkpoints, proxyCheckpoints, sliderPositions = app.redoHistory.pop()
+    photo.editHistory = editHistory
+    photo.checkpoints = checkpoints
+    photo.proxyCheckpoints = proxyCheckpoints
+    photo.pixelGrid = photo.checkpoints[-1]
+
+    for i in range(len(app.adjustmentSidebar.sliders)):
+        app.adjustmentSidebar.sliders[i].cx = sliderPositions[i]
+
+    applyEdits(app)
+
 
 #  ----- Event Handlers -------
 
 def onKeyPress(app, key):
     if key == "b":
         commitEdit(app, "Blur", app.blurSize)
+    if key == "u":
+        undo(app)
+    if key == "r":
+        redo(app)
     
-
 
 def onMouseMove(app, mouseX, mouseY):
     if app.startScreen:
-        if (app.buttonX - app.buttonWidth/2 <= mouseX <= app.buttonX + app.buttonWidth/2 
+        if (app.buttonX - app.buttonWidth/2 <= mouseX <= app.buttonX + app.buttonWidth/2
             and app.buttonY - app.buttonHeight/2 <= mouseY <= app.buttonY + app.buttonHeight/2):
             app.buttonOpacity = 80
         else:
             app.buttonOpacity = 20
+
+    if app.editScreen:
+        resetButton = app.adjustmentSidebar.buttons[0]
+        if (resetButton.centerX - resetButton.width/2 <= mouseX <= resetButton.centerX + resetButton.width/2
+                and resetButton.centerY - resetButton.height/2 <= mouseY <= resetButton.centerY + resetButton.height/2):
+            resetButton.opacity = 100
+        else:
+            resetButton.opacity = 60
+        
 
 def onMousePress(app, mouseX, mouseY):
     if app.startScreen:
@@ -112,6 +174,15 @@ def onMousePress(app, mouseX, mouseY):
                 slider.cy - slider.circleRadius <= mouseY <= slider.cy + slider.circleRadius):
                 app.draggingSlider = slider
 
+
+                sliderPositions = []
+                for otherSlider in app.adjustmentSidebar.sliders:
+                    sliderPositions.append(otherSlider.cx)
+                app.stateBeforeDrag = (list(app.photo.editHistory), list(app.photo.checkpoints),
+                                       list(app.photo.proxyCheckpoints), sliderPositions)
+
+
+
                 history = app.photo.editHistory
                 exisitingIndex = None
                 for i in range(len(history)):
@@ -123,7 +194,21 @@ def onMousePress(app, mouseX, mouseY):
                 elif exisitingIndex != None:
                     app.previewProxy = app.photo.proxyCheckpoints[exisitingIndex]
 
-                
+
+
+        resetButton = app.adjustmentSidebar.buttons[0]
+        if (resetButton.centerX - resetButton.width/2 <= mouseX <= resetButton.centerX + resetButton.width/2
+                and resetButton.centerY - resetButton.height/2 <= mouseY <= resetButton.centerY + resetButton.height/2):
+            photo = app.photo
+            photo.editHistory = []
+            photo.checkpoints = photo.checkpoints[:1]
+            photo.proxyCheckpoints = photo.proxyCheckpoints[:1]
+            photo.pixelGrid = photo.checkpoints[-1]
+            for slider in app.adjustmentSidebar.sliders:
+                slider.cx = (slider.start + slider.end) / 2
+            applyEdits(app)
+
+
 
 def onMouseDrag(app, mouseX, mouseY):
     if app.editScreen and app.draggingSlider != None:
@@ -143,7 +228,7 @@ def onMouseDrag(app, mouseX, mouseY):
 def onMouseRelease(app, mouseX, mouseY):
     currSlider = app.draggingSlider
     if app.draggingSlider != None:
-        if currSlider.name in ("Brightness", "Contrast"):
+        if currSlider.name in actions:
             sliderValue = applySliderValue(app, currSlider)
             commitEdit(app, currSlider.name, sliderValue)
     app.draggingSlider = None
@@ -151,6 +236,21 @@ def onMouseRelease(app, mouseX, mouseY):
 
 def commitEdit(app, name, value):
     photo = app.photo
+
+    if app.stateBeforeDrag != None:
+        app.undoHistory.append(app.stateBeforeDrag)
+        app.stateBeforeDrag = None
+    else:
+        sliderPositions = []
+        for otherSlider in app.adjustmentSidebar.sliders:
+            sliderPositions.append(otherSlider.cx)
+        app.undoHistory.append((list(photo.editHistory), list(photo.checkpoints), list(photo.proxyCheckpoints),
+                               sliderPositions))
+    app.redoHistory = []
+
+
+
+
     history = photo.editHistory
     exisitingIndex = None
 
@@ -211,16 +311,21 @@ def applySliderValue(app, slider):
     if slider.name == "Brightness":
         amount = -255 + percent * 510
         return rounded(amount)
-    if slider.name == "Contrast":
+    elif slider.name == "Contrast":
         alpha = 0 + percent*2
         return alpha
-    if slider.name == "Saturation":
+    elif slider.name == "Saturation":
         saturationFactor = 0+percent*2
         return saturationFactor
-
-
-
-
+    if slider.name == "Brightness":
+        val = -255 + percent * 510
+        return rounded(val)  
+    elif slider.name == "Exposure":
+        EV = -2 + percent*4
+        return EV
+    elif slider.name == "Temperature":
+        val = -80 + percent * 160
+        return rounded(val)
 
 def applyEdits(app):
     pixel_image.syncImage(app.photo)

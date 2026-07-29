@@ -141,6 +141,34 @@ def applySaturationToChannel(channel, luma, saturationFactor):
     updatedVal = luma + saturationFactor * (channel-luma) 
     return rounded(bound(updatedVal))
 
+# Temperature
+def applyTemperature(destinationGrid, sourceGrid, val):
+    rows, cols = len(destinationGrid), len(destinationGrid[0])
+    for row in range(rows):
+        for col in range(cols):
+            R, G, B = sourceGrid[row][col]
+            destinationGrid[row][col] = (rounded(bound(R+val)), rounded(bound(G)), rounded(bound(B-val)))
+    return destinationGrid
+
+
+
+
+
+
+# ----- Exposure -------
+
+def applyExposure(destinationGrid, sourceGrid, EV): 
+    rows, cols = len(destinationGrid), len(destinationGrid[0])
+    for row in range(rows):
+        for col in range(cols):
+            R, G, B = sourceGrid[row][col]
+            destinationGrid[row][col] = applyExposureToChanenl(R, EV), applyExposureToChanenl(G, EV), applyExposureToChanenl(B, EV)
+    return destinationGrid
+
+def applyExposureToChanenl(channel, EV):
+    newVal = channel * (2**EV)
+    return rounded(bound(newVal))
+
 
 # ------------- Blurring ---------------------
 def applyGaussianBlur(destinationGrid, sourceGrid, size):
@@ -161,9 +189,9 @@ def applyGaussianBlur(destinationGrid, sourceGrid, size):
 
     for row in range(rows):
         for col in range(cols):
-            if size//2<=row<=rows-1-size//2:
-                destinationGrid[row][col] = (applyVerticalBlur(0, row, col, horizontalPass, gaussian1DKernel), 
-                                            applyVerticalBlur(1, row, col, horizontalPass, gaussian1DKernel), 
+            if size//2<=row<=rows-1-size//2 and size//2<=col<=cols-1-size//2:
+                destinationGrid[row][col] = (applyVerticalBlur(0, row, col, horizontalPass, gaussian1DKernel),
+                                            applyVerticalBlur(1, row, col, horizontalPass, gaussian1DKernel),
                                             applyVerticalBlur(2, row, col, horizontalPass, gaussian1DKernel))
 
             # Edge Pixels - Normal 2D non-seperable convolution
