@@ -52,6 +52,11 @@ class PhotoData:
         self.checkpoints = [copy.deepcopy(self.pixelGrid)]
 
 
+        self.proxyScaleFactor = (self.width//4, self.height//4)
+        self.proxy = self.rgbImg.resize(self.proxyScaleFactor)
+        self.proxyCheckpoints = [proxyImgToGrid(self.proxy)]
+
+
     # convert into 2d list for processing 
     def transformPixelData(self):
         startingPoint = 0
@@ -59,6 +64,30 @@ class PhotoData:
             temp = self.pixelData[startingPoint:startingPoint + self.width]
             startingPoint = self.width + startingPoint
             self.pixelGrid.append(temp)
+
+
+def proxyImgToGrid(proxy):
+    width, height = proxy.width, proxy.height
+    proxyData = list(proxy.convert('RGB').getdata())
+    grid = []
+    startingPoint = 0
+    for row in range(height):
+        temp = proxyData[startingPoint:startingPoint + width]
+        startingPoint = width + startingPoint
+        grid.append(temp)
+    return grid
+
+def gridToImage(grid):
+    rows, cols = len(grid), len(grid[0])
+    flattened = []
+    for row in range(rows):
+        for col in range(cols):
+            flattened.append(grid[row][col])
+    img = Image.new('RGB', (cols, rows))
+    img.putdata(flattened)
+    return img
+
+
 
     
 
@@ -212,6 +241,7 @@ def syncImage(photo):
     editedImg = Image.new('RGB', (photo.width, photo.height))
     editedImg.putdata(photo.pixelData)
     photo.rgbImg = editedImg
+    photo.proxy = editedImg.resize(photo.proxyScaleFactor)
     return photo.pixelData
 
 def loadIcon(path):

@@ -24,6 +24,8 @@ def onAppStart(app):
 
     app.adjustmentSidebar = AdjustmentSidebar.Sidebar(app, "Basic Adjustments")
     app.draggingSlider = None
+    app.previewProxy = None
+    app.previewImage = None
 
     app.brightness = 0
     app.contrastAlpha = 1
@@ -65,7 +67,11 @@ def loadEditScreen(app):
     heightRatio = availableHeight/app.photo.height
     scaleFactor = min(widthRatio, heightRatio)
 
-    drawImage(app.cmuImage, app.width//2, app.height//2, align = 'center', width = app.photo.width * scaleFactor, height = app.photo.height*scaleFactor)
+    if app.draggingSlider != None and app.previewImage != None:
+        visibleImage = app.previewImage
+    else:
+        visibleImage = app.cmuImage
+    drawImage(visibleImage, app.width//2, app.height//2, align = 'center', width = app.photo.width * scaleFactor, height = app.photo.height*scaleFactor)
 
 
 #  ----- Event Handlers -------
@@ -101,6 +107,17 @@ def onMousePress(app, mouseX, mouseY):
                 slider.cy - slider.circleRadius <= mouseY <= slider.cy + slider.circleRadius):
                 app.draggingSlider = slider
 
+                history = app.photo.editHistory
+                exisitingIndex = None
+                for i in range(len(history)):
+                    if history[i][0] == slider.name:
+                        exisitingIndex = i
+                        break
+                if exisitingIndex == None:
+                    app.previewProxy = app.photo.proxyCheckpoints[-1]
+                elif exisitingIndex != None:
+                    app.previewProxy = app.photo.proxyCheckpoints[exisitingIndex]
+
                 
 
 def onMouseDrag(app, mouseX, mouseY):
@@ -108,13 +125,15 @@ def onMouseDrag(app, mouseX, mouseY):
         currSlider = app.draggingSlider
         currSlider.cx = max(currSlider.start, min(currSlider.end, mouseX))
 
-        # if currSlider.name == "Brightness":
-            # sliderValue = applySliderValue(app, currSlider)
-            # applyBrightness(app, sliderValue)
+        sliderValue = applySliderValue(app, currSlider)
 
-        # if currSlider.name == "Contrast":
-            # sliderValue = applySliderValue(app, currSlider)
-            # applyContrast(app, sliderValue)
+        previewGrid = copy.deepcopy(app.previewProxy)
+        actions[currSlider.name](previewGrid, previewGrid, sliderValue)
+        previewImg = pixel_image.gridToImage(previewGrid)
+        app.previewImage = CMUImage(previewImg)
+
+       
+        
 
 def onMouseRelease(app, mouseX, mouseY):
     currSlider = app.draggingSlider
@@ -135,16 +154,32 @@ def commitEdit(app, name, value):
             break
     if exisitingIndex == None:
         history.append((name, value)) # add to edit history
+
         newGrid = copy.deepcopy(photo.checkpoints[-1]) #create a new copy of the image
+        newProxyGrid = copy.deepcopy(photo.proxyCheckpoints[-1])
+
         actions[name](newGrid, newGrid, value) # edit that copy
+        actions[name](newProxyGrid, newProxyGrid, value)
+
         photo.checkpoints.append(newGrid) # add that copy to the checkpoints
+        photo.proxyCheckpoints.append(newProxyGrid)
+
     elif exisitingIndex != None:
         history[exisitingIndex] = (name, value)
+
         currGrid = copy.deepcopy(photo.checkpoints[exisitingIndex])
+        currProxyGrid = copy.deepcopy(photo.proxyCheckpoints[exisitingIndex])
+
         photo.checkpoints = photo.checkpoints[:exisitingIndex + 1]
+        photo.proxyCheckpoints = photo.proxyCheckpoints[:exisitingIndex + 1]
+
         for i in range(exisitingIndex, len(history)):
             name, value = history[i]
+
             actions[name](currGrid, currGrid, value)
+            actions[name](currProxyGrid, currProxyGrid, value)
+
+            photo.proxyCheckpoints.append(copy.deepcopy(currProxyGrid))
             photo.checkpoints.append(copy.deepcopy(currGrid))
 
     photo.pixelGrid = photo.checkpoints[-1]
@@ -177,6 +212,7 @@ def applySliderValue(app, slider):
 def applyEdits(app):
     pixel_image.syncImage(app.photo)
     app.cmuImage = CMUImage(app.photo.rgbImg)
+
 
 
 def main():
