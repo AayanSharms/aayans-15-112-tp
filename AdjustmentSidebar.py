@@ -10,6 +10,7 @@ class Sidebar:
         if self.title == "Basic Adjustments":
             self.sliders.append(Slider(app, "Brightness", self.centerX, self.top+150, self.width))
             self.sliders.append(Slider(app, "Contrast", self.centerX, self.top+250, self.width))
+            self.sliders.append(Slider(app, "Saturation", self.centerX, self.top + 350, self.width))
 
     def updateDimensions(self, app):
         self.width = app.width // 5

@@ -52,7 +52,7 @@ class PhotoData:
         self.checkpoints = [copy.deepcopy(self.pixelGrid)]
 
 
-        self.proxyScaleFactor = (self.width//4, self.height//4)
+        self.proxyScaleFactor = (self.width//2, self.height//2)
         self.proxy = self.rgbImg.resize(self.proxyScaleFactor)
         self.proxyCheckpoints = [proxyImgToGrid(self.proxy)]
 
@@ -90,11 +90,6 @@ def gridToImage(grid):
 
 
     
-
-# KNOWN LIMITATION - bounding brightness is lossy, reversing a brightness change
-# that has been bounded will not restore the original value
-# something to keep in mind and possibly try and fix
-# LIMITATION FIXED ^^^ Added logic to only edit the original image, not edit the edited image
 def applyBrightnessAdjustment(destinationGrid, sourceGrid, amount):
     rows, cols = len(destinationGrid), len(destinationGrid[0])
     for row in range(rows):
@@ -126,9 +121,28 @@ def applyContrastToChannel(val, alpha):
     updatedVal = (val - 128) * alpha + 128 # 
     return rounded(bound(updatedVal))
 
+# Saturation
+
+def applySaturation(destinationGrid, sourceGrid, saturationFactor):
+    rows, cols = len(destinationGrid), len(destinationGrid[0])
+    for row in range(rows):
+        for col in range(cols):
+            R, G, B = sourceGrid[row][col]
+            luma = computeLuma(R, G, B)
+            destinationGrid[row][col] = (applySaturationToChannel(R, luma, saturationFactor), 
+                                         applySaturationToChannel(G, luma, saturationFactor), 
+                                         applySaturationToChannel(B, luma, saturationFactor))
+    return destinationGrid
+
+def computeLuma(R, G, B):
+    return 0.299*R + 0.587*G+ 0.114*B
+
+def applySaturationToChannel(channel, luma, saturationFactor):
+    updatedVal = luma + saturationFactor * (channel-luma) 
+    return rounded(bound(updatedVal))
 
 
-# Blur
+# ------------- Blurring ---------------------
 def applyGaussianBlur(destinationGrid, sourceGrid, size):
     rows, cols = len(destinationGrid), len(destinationGrid[0])
     gaussian1DKernel = convolution.construct1DGaussianKernel(size)
@@ -206,16 +220,6 @@ def applyVerticalBlur(channelIndex, row, col, pixelGrid, kernel):
     return rounded(bound(total))
     
 
-def applyBlurToChannel(channelIndex, row, col, originalPixelGrid, kernel):
-    size = len(kernel)
-    total = 0
-    for ky in range(size):
-        for kx in range(size):
-            half = size//2
-            xOffset, yOffset = kx - half, ky - half
-            xPos, yPos = col + xOffset, row+yOffset
-            total += kernel[ky][kx] * originalPixelGrid[yPos][xPos][channelIndex]
-    return rounded(bound(total))
 
 
 def bound(val):

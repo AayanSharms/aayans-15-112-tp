@@ -5,7 +5,8 @@ import copy
 
 actions = {"Brightness": pixel_image.applyBrightnessAdjustment, 
            "Contrast": pixel_image.applyContrast,
-           "Blur": pixel_image.applyGaussianBlur}
+           "Blur": pixel_image.applyGaussianBlur,
+           "Saturation": pixel_image.applySaturation}
 
 def onAppStart(app):
     app.photo = None
@@ -23,6 +24,8 @@ def onAppStart(app):
     app.folderIcon = pixel_image.loadIcon('/Users/aayansharma/Documents/aayans-15-112-m26-tp/Images:Assets/foldericon.png')
 
     app.adjustmentSidebar = AdjustmentSidebar.Sidebar(app, "Basic Adjustments")
+
+
     app.draggingSlider = None
     app.previewProxy = None
     app.previewImage = None
@@ -67,7 +70,9 @@ def loadEditScreen(app):
     heightRatio = availableHeight/app.photo.height
     scaleFactor = min(widthRatio, heightRatio)
 
-    if app.draggingSlider != None and app.previewImage != None:
+
+    # if there is no slider being dragged and there is no preview image, the image to view is the preview image
+    if app.draggingSlider != None and app.previewImage != None: 
         visibleImage = app.previewImage
     else:
         visibleImage = app.cmuImage
@@ -127,9 +132,9 @@ def onMouseDrag(app, mouseX, mouseY):
 
         sliderValue = applySliderValue(app, currSlider)
 
-        previewGrid = copy.deepcopy(app.previewProxy)
-        actions[currSlider.name](previewGrid, previewGrid, sliderValue)
-        previewImg = pixel_image.gridToImage(previewGrid)
+        previewGrid = copy.deepcopy(app.previewProxy) # dont edit the actual preview
+        actions[currSlider.name](previewGrid, previewGrid, sliderValue) # applies the edit
+        previewImg = pixel_image.gridToImage(previewGrid) # turns it into a readable image
         app.previewImage = CMUImage(previewImg)
 
        
@@ -148,33 +153,38 @@ def commitEdit(app, name, value):
     photo = app.photo
     history = photo.editHistory
     exisitingIndex = None
+
+    # go through the edit history and see if that edit was already made
     for i in range(len(history)):
         if history[i][0] == name:
             exisitingIndex = i
             break
+
     if exisitingIndex == None:
         history.append((name, value)) # add to edit history
 
         newGrid = copy.deepcopy(photo.checkpoints[-1]) #create a new copy of the image
-        newProxyGrid = copy.deepcopy(photo.proxyCheckpoints[-1])
+        newProxyGrid = copy.deepcopy(photo.proxyCheckpoints[-1]) #create a new copy of a proxy
 
         actions[name](newGrid, newGrid, value) # edit that copy
-        actions[name](newProxyGrid, newProxyGrid, value)
+        actions[name](newProxyGrid, newProxyGrid, value) #edit the proxy
 
         photo.checkpoints.append(newGrid) # add that copy to the checkpoints
-        photo.proxyCheckpoints.append(newProxyGrid)
+        photo.proxyCheckpoints.append(newProxyGrid) # add that copy to proxy checkpoints
 
     elif exisitingIndex != None:
-        history[exisitingIndex] = (name, value)
 
-        currGrid = copy.deepcopy(photo.checkpoints[exisitingIndex])
-        currProxyGrid = copy.deepcopy(photo.proxyCheckpoints[exisitingIndex])
+        history[exisitingIndex] = (name, value) # edits the value that is already there
 
-        photo.checkpoints = photo.checkpoints[:exisitingIndex + 1]
-        photo.proxyCheckpoints = photo.proxyCheckpoints[:exisitingIndex + 1]
+        currGrid = copy.deepcopy(photo.checkpoints[exisitingIndex]) # copies that specific index to edit
+        currProxyGrid = copy.deepcopy(photo.proxyCheckpoints[exisitingIndex]) # Same thing ^ but for proxy
 
+        photo.checkpoints = photo.checkpoints[:exisitingIndex + 1] # the checkpoints from that value onwards
+        photo.proxyCheckpoints = photo.proxyCheckpoints[:exisitingIndex + 1] # the checkpoints from that value onwards
+
+        # applies that edit to every checkpoint after that 
         for i in range(exisitingIndex, len(history)):
-            name, value = history[i]
+            name, value = history[i] #unpacks tuple
 
             actions[name](currGrid, currGrid, value)
             actions[name](currProxyGrid, currProxyGrid, value)
@@ -182,6 +192,7 @@ def commitEdit(app, name, value):
             photo.proxyCheckpoints.append(copy.deepcopy(currProxyGrid))
             photo.checkpoints.append(copy.deepcopy(currGrid))
 
+    # makes the last edit the visible one
     photo.pixelGrid = photo.checkpoints[-1]
     applyEdits(app)
 
@@ -196,14 +207,16 @@ def applyBlur(app, size):
         applyEdits(app)
 
 def applySliderValue(app, slider):
+    percent = (slider.cx - slider.start) / (slider.end - slider.start)
     if slider.name == "Brightness":
-        percent = (slider.cx - slider.start) / (slider.end - slider.start)
         amount = -255 + percent * 510
         return rounded(amount)
     if slider.name == "Contrast":
-        percent = (slider.cx - slider.start) / (slider.end - slider.start)
         alpha = 0 + percent*2
         return alpha
+    if slider.name == "Saturation":
+        saturationFactor = 0+percent*2
+        return saturationFactor
 
 
 
