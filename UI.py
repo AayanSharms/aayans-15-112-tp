@@ -1,7 +1,11 @@
 from cmu_graphics import *
 import pixel_image
 import AdjustmentSidebar
+import copy
 
+actions = {"Brightness": pixel_image.applyBrightnessAdjustment, 
+           "Contrast": pixel_image.applyContrast,
+           "Blur": pixel_image.applyGaussianBlur}
 
 def onAppStart(app):
     app.photo = None
@@ -23,7 +27,7 @@ def onAppStart(app):
 
     app.brightness = 0
     app.contrastAlpha = 1
-    app.blurSize = 3
+    app.blurSize = 15
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill = rgb(30, 30, 30)) # background
@@ -61,8 +65,6 @@ def loadEditScreen(app):
     heightRatio = availableHeight/app.photo.height
     scaleFactor = min(widthRatio, heightRatio)
 
-
-
     drawImage(app.cmuImage, app.width//2, app.height//2, align = 'center', width = app.photo.width * scaleFactor, height = app.photo.height*scaleFactor)
 
 
@@ -70,8 +72,8 @@ def loadEditScreen(app):
 
 def onKeyPress(app, key):
     if key == "b":
-        applyBlur(app, app.blurSize)
-        app.blurSize += 4
+        commitEdit(app, "Blur", app.blurSize)
+    
 
 
 def onMouseMove(app, mouseX, mouseY):
@@ -106,30 +108,51 @@ def onMouseDrag(app, mouseX, mouseY):
         currSlider = app.draggingSlider
         currSlider.cx = max(currSlider.start, min(currSlider.end, mouseX))
 
-        if currSlider.name == "Brightness":
-            sliderValue = applySliderValue(app, currSlider)
-            applyBrightness(app, sliderValue)
-        if currSlider.name == "Contrast":
-            sliderValue = applySliderValue(app, currSlider)
-            applyContrast(app, sliderValue)
+        # if currSlider.name == "Brightness":
+            # sliderValue = applySliderValue(app, currSlider)
+            # applyBrightness(app, sliderValue)
+
+        # if currSlider.name == "Contrast":
+            # sliderValue = applySliderValue(app, currSlider)
+            # applyContrast(app, sliderValue)
 
 def onMouseRelease(app, mouseX, mouseY):
+    currSlider = app.draggingSlider
+    if app.draggingSlider != None:
+        if currSlider.name in ("Brightness", "Contrast"):
+            sliderValue = applySliderValue(app, currSlider)
+            commitEdit(app, currSlider.name, sliderValue)
     app.draggingSlider = None
 
+
+def commitEdit(app, name, value):
+    photo = app.photo
+    history = photo.editHistory
+    exisitingIndex = None
+    for i in range(len(history)):
+        if history[i][0] == name:
+            exisitingIndex = i
+            break
+    if exisitingIndex == None:
+        history.append((name, value)) # add to edit history
+        newGrid = copy.deepcopy(photo.checkpoints[-1]) #create a new copy of the image
+        actions[name](newGrid, newGrid, value) # edit that copy
+        photo.checkpoints.append(newGrid) # add that copy to the checkpoints
+    elif exisitingIndex != None:
+        history[exisitingIndex] = (name, value)
+        currGrid = copy.deepcopy(photo.checkpoints[exisitingIndex])
+        photo.checkpoints = photo.checkpoints[:exisitingIndex + 1]
+        for i in range(exisitingIndex, len(history)):
+            name, value = history[i]
+            actions[name](currGrid, currGrid, value)
+            photo.checkpoints.append(copy.deepcopy(currGrid))
+
+    photo.pixelGrid = photo.checkpoints[-1]
+    applyEdits(app)
 
 
 
 # ------ Editing functions -----
-def applyBrightness(app, amount):
-    if app.editScreen:
-        pixel_image.applyBrightnessAdjustment(app.photo.pixelGrid, app.photo.originalPixelGrid, amount)
-        applyEdits(app)
-
-def applyContrast(app, alpha):
-    if app.editScreen:
-        app.contrastAlpha = alpha
-        pixel_image.applyContrast(app.photo.pixelGrid, app.photo.originalPixelGrid, alpha)
-        applyEdits(app)
 
 def applyBlur(app, size):
     if app.editScreen:
@@ -146,6 +169,9 @@ def applySliderValue(app, slider):
         percent = (slider.cx - slider.start) / (slider.end - slider.start)
         alpha = 0 + percent*2
         return alpha
+
+
+
 
 
 def applyEdits(app):

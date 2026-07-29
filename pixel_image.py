@@ -37,6 +37,7 @@ def loadImage():
     return PhotoData(imgWidth, imgHeight, imgData, rgbImg)
 
 
+
 # constructing class for image
 class PhotoData:
     def __init__(self, width, height, pixelData, rgbImg):
@@ -46,7 +47,9 @@ class PhotoData:
         self.pixelGrid = [] #2d list of tuples
         self.rgbImg = rgbImg
         self.transformPixelData()
-        self.originalPixelGrid = copy.deepcopy(self.pixelGrid)
+        self.originalPixelGrid = copy.deepcopy(self.pixelGrid) 
+        self.editHistory = []
+        self.checkpoints = [copy.deepcopy(self.pixelGrid)]
 
 
     # convert into 2d list for processing 
@@ -57,17 +60,19 @@ class PhotoData:
             startingPoint = self.width + startingPoint
             self.pixelGrid.append(temp)
 
+    
+
 # KNOWN LIMITATION - bounding brightness is lossy, reversing a brightness change
 # that has been bounded will not restore the original value
 # something to keep in mind and possibly try and fix
 # LIMITATION FIXED ^^^ Added logic to only edit the original image, not edit the edited image
-def applyBrightnessAdjustment(newPixelGrid, originalPixelGrid, amount):
-    rows, cols = len(newPixelGrid), len(newPixelGrid[0])
+def applyBrightnessAdjustment(destinationGrid, sourceGrid, amount):
+    rows, cols = len(destinationGrid), len(destinationGrid[0])
     for row in range(rows):
         for col in range(cols):
-            R, G, B = originalPixelGrid[row][col]
-            newPixelGrid[row][col] = boundBrightness(R, amount), boundBrightness(G, amount), boundBrightness(B, amount)
-    return newPixelGrid
+            R, G, B = sourceGrid[row][col]
+            destinationGrid[row][col] = boundBrightness(R, amount), boundBrightness(G, amount), boundBrightness(B, amount)
+    return destinationGrid
 
 def boundBrightness(val, amount):
     if val + amount < 0:
@@ -79,37 +84,79 @@ def boundBrightness(val, amount):
     return val
 
 
-def applyContrast(pixelGrid, originalPixelGrid, alpha): 
-    rows, cols = len(pixelGrid), len(pixelGrid[0])
+def applyContrast(destinationGrid, sourceGrid, alpha): 
+    rows, cols = len(destinationGrid), len(destinationGrid[0])
     for row in range(rows):
         for col in range(cols):
-            R, G, B = originalPixelGrid[row][col]
-            pixelGrid[row][col] = applyContrastToChannel(R, alpha), applyContrastToChannel(G, alpha), applyContrastToChannel(B, alpha)
-    return pixelGrid
+            R, G, B = sourceGrid[row][col]
+            destinationGrid[row][col] = applyContrastToChannel(R, alpha), applyContrastToChannel(G, alpha), applyContrastToChannel(B, alpha)
+    return destinationGrid
 
 
 def applyContrastToChannel(val, alpha):
     updatedVal = (val - 128) * alpha + 128 # 
     return rounded(bound(updatedVal))
+
+
+
+# Blur
+def applyGaussianBlur(destinationGrid, sourceGrid, size):
+    rows, cols = len(destinationGrid), len(destinationGrid[0])
+    gaussian1DKernel = convolution.construct1DGaussianKernel(size)
+    gaussian2DKernel = convolution.constructGaussianKernel(size)
+    horizontalPass = copy.deepcopy(sourceGrid)
+
     
-def applyGaussianBlur(newPixelGrid, originalPixelGrid, size):
-    rows, cols = len(newPixelGrid), len(newPixelGrid[0])
-    gaussianKernel = convolution.construct1DGaussianKernel(size)
-    horizontalPass = copy.deepcopy(originalPixelGrid)
     for row in range(rows):
         for col in range(cols):
-            if size//2<=row<=rows-1-size//2 and size//2<=col<=cols-1-size//2:
-                horizontalPass[row][col] = (applyHorizontalBlur(0, row, col, originalPixelGrid, gaussianKernel), 
-                                        applyHorizontalBlur(1, row, col, originalPixelGrid, gaussianKernel), 
-                                        applyHorizontalBlur(2, row, col, originalPixelGrid, gaussianKernel))
+
+            #seperable 2d convolution
+            if size//2<=col<=cols-1-size//2:
+                horizontalPass[row][col] = (applyHorizontalBlur(0, row, col, sourceGrid, gaussian1DKernel), 
+                                        applyHorizontalBlur(1, row, col, sourceGrid, gaussian1DKernel), 
+                                        applyHorizontalBlur(2, row, col, sourceGrid, gaussian1DKernel))
 
     for row in range(rows):
         for col in range(cols):
-            if size//2<=row<=rows-1-size//2 and size//2<=col<=cols-1-size//2:
-                newPixelGrid[row][col] = (applyVerticalBlur(0, row, col, horizontalPass, gaussianKernel), 
-                                            applyVerticalBlur(1, row, col, horizontalPass, gaussianKernel), 
-                                            applyVerticalBlur(2, row, col, horizontalPass, gaussianKernel))
-    return newPixelGrid
+            if size//2<=row<=rows-1-size//2:
+                destinationGrid[row][col] = (applyVerticalBlur(0, row, col, horizontalPass, gaussian1DKernel), 
+                                            applyVerticalBlur(1, row, col, horizontalPass, gaussian1DKernel), 
+                                            applyVerticalBlur(2, row, col, horizontalPass, gaussian1DKernel))
+
+            # Edge Pixels - Normal 2D non-seperable convolution
+            else:
+                destinationGrid[row][col] = (applyEdgeBlur(0, row, col, horizontalPass, gaussian2DKernel), 
+                                        applyEdgeBlur(1, row, col, horizontalPass, gaussian2DKernel), 
+                                        applyEdgeBlur(2, row, col, horizontalPass, gaussian2DKernel))
+
+
+    return destinationGrid
+
+
+# applies mirroring logic for smooth boundary blur
+def applyEdgeBlur(channelIndex, row, col, pixelGrid, kernel):
+    rows, cols = len(pixelGrid), len(pixelGrid[0])
+    size = len(kernel)
+    total = 0
+    for ky in range(size):
+        for kx in range(size):
+            half = size//2
+            xOffset, yOffset = kx - half, ky - half
+            xPos, yPos = col + xOffset, row+yOffset
+            if xPos < 0:
+                xPos = -xPos
+            elif xPos >= cols:
+                overshootX = xPos-(cols-1)
+                xPos = (cols-1)-overshootX
+            if yPos < 0:
+                yPos = -yPos
+            elif yPos >= rows:
+                overshootY = yPos - (rows-1)
+                yPos = (rows-1)-overshootY
+
+            total += kernel[ky][kx] * pixelGrid[yPos][xPos][channelIndex]
+    return rounded(bound(total))
+
 
 def applyHorizontalBlur(channelIndex, row, col, pixelGrid, kernel):
     size = len(kernel)
@@ -140,8 +187,6 @@ def applyBlurToChannel(channelIndex, row, col, originalPixelGrid, kernel):
             xPos, yPos = col + xOffset, row+yOffset
             total += kernel[ky][kx] * originalPixelGrid[yPos][xPos][channelIndex]
     return rounded(bound(total))
-
-
 
 
 def bound(val):
