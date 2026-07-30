@@ -88,7 +88,7 @@ def gridToImage(grid):
     return img
 
 
-
+# Brightness
     
 def applyBrightnessAdjustment(destinationGrid, sourceGrid, amount):
     rows, cols = len(destinationGrid), len(destinationGrid[0])
@@ -107,7 +107,7 @@ def boundBrightness(val, amount):
         val += amount
     return val
 
-
+# Contrast
 def applyContrast(destinationGrid, sourceGrid, alpha): 
     rows, cols = len(destinationGrid), len(destinationGrid[0])
     for row in range(rows):
@@ -270,7 +270,7 @@ def applyDraw(destinationGrid, points, brushSize, color):
         for dRow in range(-radius, radius+1):
             for dCol in range(-radius, radius+1):
                 row, col = centerRow + dRow, centerCol + dCol
-                if 0<=row<rows and 0<=col<cols and dRow*dRow+dCol*dCol <= radius**2:
+                if 0<=row<rows and 0<=col<cols and dRow**2+dCol**2 <= radius**2:
                     destinationGrid[row][col]=color
     return destinationGrid
 

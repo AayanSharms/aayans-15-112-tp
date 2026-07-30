@@ -16,6 +16,12 @@ class Sidebar:
             self.sliders.append(Slider(app, "Temperature", self.centerX, self.top + 550, self.width))
             self.buttons.append(Button(app, self.centerX, self.height-50, rgb(100, 100, 100), rgb(60, 60, 60), self.width//2.3, 50))
 
+        elif self.title == "Blur Adjustments":
+            blurSlider = Slider(app, "Blur", self.centerX, self.top+150, self.width)
+            blurSlider.cx = blurSlider.start # blur only increases, so it starts at the left end
+            self.sliders.append(blurSlider)
+            self.buttons.append(Button(app, self.centerX, self.height-50, rgb(100, 100, 100), rgb(60, 60, 60), self.width//2.3, 50))
+
     def update(self, app):
         self.width = app.width // 5
         self.height = app.height
