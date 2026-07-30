@@ -40,6 +40,13 @@ def onAppStart(app):
     app.redoHistory = []
     app.stateBeforeDrag = None
 
+
+    app.drawingMode = False
+    app.drawingPoints = []
+    app.brushSize = 10
+    app.brushColor = (0, 0, 0)
+
+
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill = rgb(30, 30, 30)) # background
     if app.startScreen:
@@ -138,7 +145,8 @@ def onKeyPress(app, key):
         undo(app)
     if key == "r":
         redo(app)
-    
+    if key == 'd':
+        app.drawingMode = True
 
 def onMouseMove(app, mouseX, mouseY):
     if app.startScreen:
@@ -193,8 +201,8 @@ def onMousePress(app, mouseX, mouseY):
                     app.previewProxy = app.photo.proxyCheckpoints[-1]
                 elif exisitingIndex != None:
                     app.previewProxy = app.photo.proxyCheckpoints[exisitingIndex]
-
-
+        if app.drawingMode:
+            app.drawingPoints = [(mouseX, mouseY)]
 
         resetButton = app.adjustmentSidebar.buttons[0]
         if (resetButton.centerX - resetButton.width/2 <= mouseX <= resetButton.centerX + resetButton.width/2
@@ -222,6 +230,9 @@ def onMouseDrag(app, mouseX, mouseY):
         previewImg = pixel_image.gridToImage(previewGrid) # turns it into a readable image
         app.previewImage = CMUImage(previewImg)
 
+    if app.editScreen and app.drawingMode and len(app.drawingPoints)>0:
+        app.drawingPoints.append((mouseX, mouseY))
+
        
         
 
@@ -231,8 +242,39 @@ def onMouseRelease(app, mouseX, mouseY):
         if currSlider.name in actions:
             sliderValue = applySliderValue(app, currSlider)
             commitEdit(app, currSlider.name, sliderValue)
+    if app.drawingMode:
+        commitDraw(app, app.drawingPoints, app.brushSize, app.brushColor)
     app.draggingSlider = None
 
+
+def commitDraw(app, points, brushSize, color):
+    photo = app.photo
+    history = photo.editHistory
+    history.append(("Draw", (points, brushSize, color)))
+
+    sidebarWidth = app.adjustmentSidebar.width
+    margin = 80
+    availableWidth = app.width - (2*sidebarWidth) - margin
+    availableHeight = app.height - margin
+    scaleFactor = min(availableWidth/photo.width, availableHeight/photo.height)
+    imgLeft = app.width//2 - (photo.width*scaleFactor)/2
+    imgTop = app.height//2 - (photo.height*scaleFactor)/2
+    points = [((cx-imgLeft)/scaleFactor, (cy-imgTop)/scaleFactor) for (cx, cy) in points]
+    points = [(cx, cy) for (cx, cy) in points if 0 <= cx < photo.width and 0 <= cy < photo.height]
+
+    newGrid = copy.deepcopy(photo.checkpoints[-1])
+    pixel_image.applyDraw(newGrid, points, brushSize, color)
+    photo.checkpoints.append(newGrid)
+
+    newProxyGrid = copy.deepcopy(photo.proxyCheckpoints[-1])
+    scaleRatio = photo.proxyScaleFactor[0]/photo.width
+    scaledPoints = [(cx*scaleRatio, cy*scaleRatio) for (cx,cy) in points]
+    
+    pixel_image.applyDraw(newProxyGrid, scaledPoints, brushSize*scaleRatio, color)
+    photo.proxyCheckpoints.append(newProxyGrid)
+
+    photo.pixelGrid = photo.checkpoints[-1]
+    applyEdits(app)
 
 def commitEdit(app, name, value):
     photo = app.photo

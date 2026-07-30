@@ -260,6 +260,21 @@ def bound(val):
     return val
 
 
+# Draw feature
+
+def applyDraw(destinationGrid, points, brushSize, color):
+    rows, cols = len(destinationGrid), len(destinationGrid[0])
+    radius = rounded(brushSize/2)
+    for (cx, cy) in points:
+        centerRow, centerCol = rounded(cy), rounded(cx)
+        for dRow in range(-radius, radius+1):
+            for dCol in range(-radius, radius+1):
+                row, col = centerRow + dRow, centerCol + dCol
+                if 0<=row<rows and 0<=col<cols and dRow*dRow+dCol*dCol <= radius**2:
+                    destinationGrid[row][col]=color
+    return destinationGrid
+
+
 # syncs image
 def syncImage(photo):
     rows, cols = len(photo.pixelGrid), len(photo.pixelGrid[0])
