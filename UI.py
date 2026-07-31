@@ -179,8 +179,6 @@ def undo(app):
     photo.checkpoints = checkpoints
     photo.proxyCheckpoints = proxyCheckpoints
     photo.pixelGrid = photo.checkpoints[-1] # set current state of image to most recent state 
-
-
     # resets slider positions
     # This piece of code was helped by claude 
     for i in range(len(allSliderHistory(app))):
@@ -450,6 +448,8 @@ def commitDraw(app, points, brushSize, color):
     # sets current state to edit
     photo.pixelGrid = photo.checkpoints[-1]
     applyEdits(app)
+
+
 
 def commitEdit(app, name, value):
     photo = app.photo
