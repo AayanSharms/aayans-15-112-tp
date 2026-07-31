@@ -32,17 +32,24 @@ def onAppStart(app):
     app.folderIcon = pixel_image.loadIcon(os.path.join(assetsDir, 'foldericon.png'))
     app.pointerIcon = pixel_image.loadIcon(os.path.join(assetsDir, 'pointericon.png'))
     app.blurIcon = pixel_image.loadIcon(os.path.join(assetsDir, 'bluricon.png'))
+    app.drawIcon = pixel_image.loadIcon(os.path.join(assetsDir, 'drawicon.png'))
 
     app.adjustmentSidebar = AdjustmentSidebar.Sidebar(app, "Basic Adjustments")
     app.blurSidebar = AdjustmentSidebar.Sidebar(app, "Blur Adjustments")
+    app.drawSidebar = AdjustmentSidebar.Sidebar(app, "Draw")
     app.activeSidebar = app.adjustmentSidebar
 
     toolButtonWidth = 50
     toolButtonHeight = 50
     app.selectToolButton = AdjustmentSidebar.Button(app, 70, 150, rgb(100, 100, 100), rgb(60, 60, 60), toolButtonWidth, toolButtonHeight)
     app.blurToolButton = AdjustmentSidebar.Button(app, 70, 215, rgb(100, 100, 100), rgb(60, 60, 60), toolButtonWidth, toolButtonHeight)
+    app.drawToolButton = AdjustmentSidebar.Button(app, 70, 280, rgb(100, 100, 100), rgb(60, 60, 60), toolButtonWidth, toolButtonHeight)
     app.selectToolButton.opacity = 100
     app.blurToolButton.opacity = 60
+    app.drawToolButton.opacity = 60
+
+    app.undoButton = AdjustmentSidebar.Button(app, 60, app.height-50, rgb(100, 100, 100), rgb(60, 60, 60), 80, 40)
+    app.redoButton = AdjustmentSidebar.Button(app, 180, app.height-50, rgb(100, 100, 100), rgb(60, 60, 60), 80, 40)
 
 
     app.draggingSlider = None
@@ -81,8 +88,16 @@ def drawTitle(app):
 def drawToolButtons(app):
     app.selectToolButton.drawButton(app)
     app.blurToolButton.drawButton(app)
+    app.drawToolButton.drawButton(app)
     drawImage(app.pointerIcon, app.selectToolButton.centerX, app.selectToolButton.centerY, align='center', width=24, height=24)
     drawImage(app.blurIcon, app.blurToolButton.centerX, app.blurToolButton.centerY, align='center', width=24, height=24)
+    drawImage(app.drawIcon, app.drawToolButton.centerX, app.drawToolButton.centerY, align='center', width=24, height=24)
+
+def drawUndoRedoButtons(app):
+    app.undoButton.drawButton(app)
+    app.redoButton.drawButton(app)
+    drawLabel("Undo", app.undoButton.centerX, app.undoButton.centerY, fill='white', font=app.font, bold=True, size=14)
+    drawLabel("Redo", app.redoButton.centerX, app.redoButton.centerY, fill='white', font=app.font, bold=True, size=14)
 
 def loadStartScreen(app):
     openX = app.buttonX
@@ -100,6 +115,7 @@ def loadEditScreen(app):
     drawTitle(app)
     app.activeSidebar.drawSidebar(app)
     drawToolButtons(app)
+    drawUndoRedoButtons(app)
 
     sidebarWidth = app.activeSidebar.width
     margin = 80
@@ -131,7 +147,7 @@ def loadEditScreen(app):
             drawCircle(cx, cy, radius, fill=rgb(r, g, b)) #draws circle
 
 def allSliderHistory(app):
-    allSliders = app.adjustmentSidebar.sliders + app.blurSidebar.sliders # adding lists together because those are all the sliders
+    allSliders = app.adjustmentSidebar.sliders + app.blurSidebar.sliders + app.drawSidebar.sliders # adding lists together because those are all the sliders
     return allSliders
 
 def undo(app):
@@ -224,11 +240,21 @@ def onMouseMove(app, mouseX, mouseY):
         else:
             resetButton.opacity = 60
 
+        app.undoButton.opacity = 100 if inButton(app.undoButton, mouseX, mouseY) else 60
+        app.redoButton.opacity = 100 if inButton(app.redoButton, mouseX, mouseY) else 60
+
         # only change opacity of tool buttons if they arent the active one
         if app.activeSidebar != app.adjustmentSidebar:
             app.selectToolButton.opacity = 100 if inButton(app.selectToolButton, mouseX, mouseY) else 60
         if app.activeSidebar != app.blurSidebar:
             app.blurToolButton.opacity = 100 if inButton(app.blurToolButton, mouseX, mouseY) else 60
+        if app.activeSidebar != app.drawSidebar:
+            app.drawToolButton.opacity = 100 if inButton(app.drawToolButton, mouseX, mouseY) else 60
+
+        # idea from claude to not get an mvc violation: reuses the existing drawingPoints render loop
+        # so the brush circle can follow the cursor without drawing outside of redrawAll
+        if app.drawingMode:
+            app.drawingPoints = [(mouseX, mouseY)]
 
 
 def onMousePress(app, mouseX, mouseY):
@@ -245,41 +271,60 @@ def onMousePress(app, mouseX, mouseY):
     if app.editScreen:
         if inButton(app.selectToolButton, mouseX, mouseY):
             app.activeSidebar = app.adjustmentSidebar
+            app.drawingMode = False
             app.selectToolButton.opacity = 100
             app.blurToolButton.opacity = 60
+            app.drawToolButton.opacity = 60
 
         if inButton(app.blurToolButton, mouseX, mouseY):
             app.activeSidebar = app.blurSidebar
+            app.drawingMode = False
             app.blurToolButton.opacity = 100
             app.selectToolButton.opacity = 60
+            app.drawToolButton.opacity = 60
+
+        if inButton(app.drawToolButton, mouseX, mouseY):
+            app.activeSidebar = app.drawSidebar
+            app.drawingMode = True
+            app.drawToolButton.opacity = 100
+            app.selectToolButton.opacity = 60
+            app.blurToolButton.opacity = 60
+
+        if inButton(app.undoButton, mouseX, mouseY):
+            undo(app)
+
+        if inButton(app.redoButton, mouseX, mouseY):
+            redo(app)
 
         for slider in app.activeSidebar.sliders:
             if (slider.cx - slider.circleRadius <= mouseX <= slider.cx + slider.circleRadius and
                 slider.cy - slider.circleRadius <= mouseY <= slider.cy + slider.circleRadius):
                 app.draggingSlider = slider
 
-                # appends the slider positions to the list so undo/redo can access them later
-                sliderPositions = []
-                for otherSlider in allSliderHistory(app):
-                    sliderPositions.append(otherSlider.cx)
-                app.stateBeforeDrag = (list(app.photo.editHistory), list(app.photo.checkpoints),
-                                       list(app.photo.proxyCheckpoints), sliderPositions)
+                # Brush Size is a tool not a photo edit, so undo/redo doesnt work on it, this if statement claude helped debug
+                if slider.name in actions:
+                    # appends the slider positions to the list so undo/redo can access them later
+                    sliderPositions = []
+                    for otherSlider in allSliderHistory(app):
+                        sliderPositions.append(otherSlider.cx)
+                    app.stateBeforeDrag = (list(app.photo.editHistory), list(app.photo.checkpoints),
+                                           list(app.photo.proxyCheckpoints), sliderPositions)
 
 
 
-                history = app.photo.editHistory #(editName, value)
-                exisitingIndex = None
-                for i in range(len(history)):
-                    if history[i][0] == slider.name:
-                        exisitingIndex = i
-                        break
+                    history = app.photo.editHistory #(editName, value)
+                    exisitingIndex = None
+                    for i in range(len(history)):
+                        if history[i][0] == slider.name:
+                            exisitingIndex = i
+                            break
 
-                # if edit hasnt been made, add it to the end
-                if exisitingIndex == None:
-                    app.previewProxy = app.photo.proxyCheckpoints[-1]
-                # replace existing index
-                elif exisitingIndex != None:
-                    app.previewProxy = app.photo.proxyCheckpoints[exisitingIndex]
+                    # if edit hasnt been made, add it to the end
+                    if exisitingIndex == None:
+                        app.previewProxy = app.photo.proxyCheckpoints[-1]
+                    # replace existing index
+                    elif exisitingIndex != None:
+                        app.previewProxy = app.photo.proxyCheckpoints[exisitingIndex]
 
 
         if app.drawingMode:
@@ -301,6 +346,23 @@ def onMousePress(app, mouseX, mouseY):
 
 
 
+# NOT PART OF GRADED ALGORITHMIC CODE -- exempt from grading.
+# Written by AI: fast mouse movement leaves gaps between recorded points, so
+# this fills in extra points between the last point and the new one, spaced
+# closely enough that the stamped brush circles overlap into a solid line.
+def interpolatePoints(p1, p2, step):
+    x1, y1 = p1
+    x2, y2 = p2
+    dist = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
+    if dist == 0:
+        return [p2]
+    steps = int(dist // step) + 1
+    points = []
+    for i in range(1, steps + 1):
+        t = i / steps
+        points.append((x1 + (x2 - x1)*t, y1 + (y2 - y1)*t))
+    return points
+
 def onMouseDrag(app, mouseX, mouseY):
     if app.editScreen and app.draggingSlider != None:
         currSlider = app.draggingSlider
@@ -308,14 +370,17 @@ def onMouseDrag(app, mouseX, mouseY):
 
         sliderValue = applySliderValue(app, currSlider)
 
+        if currSlider.name in actions:
+            previewGrid = copy.deepcopy(app.previewProxy) # dont edit the actual preview
+            actions[currSlider.name](previewGrid, previewGrid, sliderValue) # applies the edit on top of the image
+            previewImg = pixel_image.gridToImage(previewGrid) # turns it into a readable image
+            app.previewImage = CMUImage(previewImg)
+        elif currSlider.name == "Brush Size":
+            app.brushSize = sliderValue
 
-        previewGrid = copy.deepcopy(app.previewProxy) # dont edit the actual preview
-        actions[currSlider.name](previewGrid, previewGrid, sliderValue) # applies the edit on top of the image
-        previewImg = pixel_image.gridToImage(previewGrid) # turns it into a readable image
-        app.previewImage = CMUImage(previewImg)
-
+    # NOT PART OF GRADED ALGORITHMIC CODE -- exempt from grading. Written by AI.
     if app.editScreen and app.drawingMode and len(app.drawingPoints)>0:
-        app.drawingPoints.append((mouseX, mouseY))
+        app.drawingPoints.extend(interpolatePoints(app.drawingPoints[-1], (mouseX, mouseY), app.brushSize/2))
 
        
         
@@ -476,6 +541,10 @@ def applySliderValue(app, slider):
         # equation from claude, snaps percent to odd kernel sizes between 3 and 31
         size = 3 + 2*rounded(percent*14)
         return size
+    elif slider.name == "Brush Size":
+        # equation recommended by claude, not exempt
+        size = 2 + percent*48
+        return rounded(size)
 
 def applyEdits(app):
     pixel_image.syncImage(app.photo)
