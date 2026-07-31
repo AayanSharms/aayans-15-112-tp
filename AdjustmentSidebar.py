@@ -4,9 +4,9 @@ class Sidebar:
     def __init__(self, app, title):
         self.title = title
         self.sliders = []
+        self.buttons = []
         self.font = 'montserrat'
         self.update(app)
-        self.buttons = []
 
         if self.title == "Basic Adjustments":
             self.sliders.append(Slider(app, "Brightness", self.centerX, self.top+150, self.width))
@@ -34,6 +34,9 @@ class Sidebar:
         self.top = 0
         for slider in self.sliders:
             slider.updateSliderPosition(self.centerX, self.width)
+        for button in self.buttons:
+            button.centerX = self.centerX
+            button.centerY = self.height - 50
 
     def drawSidebar(self, app):
         self.update(app)
