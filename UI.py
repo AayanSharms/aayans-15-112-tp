@@ -48,8 +48,9 @@ def onAppStart(app):
     app.blurToolButton.opacity = 60
     app.drawToolButton.opacity = 60
 
-    app.undoButton = AdjustmentSidebar.Button(app, 60, app.height-50, rgb(100, 100, 100), rgb(60, 60, 60), 80, 40)
-    app.redoButton = AdjustmentSidebar.Button(app, 180, app.height-50, rgb(100, 100, 100), rgb(60, 60, 60), 80, 40)
+    app.undoButton = AdjustmentSidebar.Button(app, 50, app.height-50, rgb(100, 100, 100), rgb(60, 60, 60), 80, 40)
+    app.redoButton = AdjustmentSidebar.Button(app, 150, app.height-50, rgb(100, 100, 100), rgb(60, 60, 60), 80, 40)
+    app.saveButton = AdjustmentSidebar.Button(app, 250, app.height-50, rgb(100, 100, 100), rgb(60, 60, 60), 80, 40)
 
 
     app.draggingSlider = None
@@ -71,7 +72,7 @@ def onAppStart(app):
     app.brushSize = 10
     app.brushColor = (0, 0, 0)
 
-    app.stepsPerSecond = 100
+
 
 
 def redrawAll(app):
@@ -97,8 +98,10 @@ def drawToolButtons(app):
 def drawUndoRedoButtons(app):
     app.undoButton.drawButton(app)
     app.redoButton.drawButton(app)
+    app.saveButton.drawButton(app)
     drawLabel("Undo", app.undoButton.centerX, app.undoButton.centerY, fill='white', font=app.font, bold=True, size=14)
     drawLabel("Redo", app.redoButton.centerX, app.redoButton.centerY, fill='white', font=app.font, bold=True, size=14)
+    drawLabel("Save", app.saveButton.centerX, app.saveButton.centerY, fill='white', font=app.font, bold=True, size=14)
 
 def loadStartScreen(app):
     openX = app.buttonX
@@ -241,6 +244,7 @@ def onMouseMove(app, mouseX, mouseY):
 
         app.undoButton.opacity = 100 if inButton(app.undoButton, mouseX, mouseY) else 60
         app.redoButton.opacity = 100 if inButton(app.redoButton, mouseX, mouseY) else 60
+        app.saveButton.opacity = 100 if inButton(app.saveButton, mouseX, mouseY) else 60
 
         # only change opacity of tool buttons if they arent the active one
         if app.activeSidebar != app.adjustmentSidebar:
@@ -294,6 +298,10 @@ def onMousePress(app, mouseX, mouseY):
 
         if inButton(app.redoButton, mouseX, mouseY):
             redo(app)
+
+        if inButton(app.saveButton, mouseX, mouseY):
+            pixel_image.syncImage(app.photo)
+            pixel_image.saveImage(app.photo)
 
         for slider in app.activeSidebar.sliders:
             if (slider.cx - slider.circleRadius <= mouseX <= slider.cx + slider.circleRadius and

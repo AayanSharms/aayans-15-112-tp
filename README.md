@@ -4,7 +4,7 @@ PyPhoto Editor is a Python photo editor built as a CMU 15-112 term project. It l
 
 Video Demo
 
-https://drive.google.com/file/d/12CMXZQpqxqNnpe1elaj7AfkkgxD6Nbmm/view?usp=sharing
+https://drive.google.com/file/d/1lE06Nvx7w9wnOSvS2T00vgH_C8jRVvfA/view?usp=sharing
 
 How to Run
 
