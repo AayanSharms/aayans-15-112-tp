@@ -67,6 +67,7 @@ def onAppStart(app):
 
     app.drawingMode = False
     app.drawingPoints = []
+    app.isDrawingStroke = False
     app.brushSize = 10
     app.brushColor = (0, 0, 0)
 
@@ -108,8 +109,7 @@ def loadStartScreen(app):
     drawTitle(app)
     drawImage(app.folderIcon, openX-80, openY, align = 'center', width = 40, height =40 )
     drawLabel("Open", openX+10, openY, size=40, fill = color, align='center', font=app.font, bold=True)
-    drawLabel("Press u for undo, r for redo, drag sliders to adjust image", openX+10, openY + 90, size = 30, fill = color, align = 'center', font = app.font, bold = True)
-    drawLabel("Please pick an image around 500x500 (works too slow otherwise)", openX+10, openY + 140, size = 30, fill = color, align = 'center', font = app.font, bold = True)
+    drawLabel("Please pick an image around 500x500", openX+10, openY + 140, size = 30, fill = color, align = 'center', font = app.font, bold = True)
 
 def loadEditScreen(app):
     drawTitle(app)
@@ -179,7 +179,7 @@ def undo(app):
 
 
     # resets slider positions
-    # This piece of code was helped by claude (Lines 139-140)
+    # This piece of code was helped by claude 
     for i in range(len(allSliderHistory(app))):
         allSliderHistory(app)[i].cx = sliderPositions[i]
 
@@ -204,7 +204,7 @@ def redo(app):
     photo.pixelGrid = photo.checkpoints[-1]
 
 
-    # This piece of code was helped by claude (Lines 164-165)
+    # This piece of code was helped by claude
     for i in range(len(allSliderHistory(app))):
         allSliderHistory(app)[i].cx = sliderPositions[i]
 
@@ -218,12 +218,11 @@ def onKeyPress(app, key):
         undo(app)
     if key == "r":
         redo(app)
-    if key == 'd':
-        app.drawingMode = True
 
-def inButton(button, mouseX, mouseY):
-    return (button.centerX - button.width/2 <= mouseX <= button.centerX + button.width/2 and
-            button.centerY - button.height/2 <= mouseY <= button.centerY + button.height/2)
+
+def inButton(button, x, y):
+    return (button.centerX - button.width/2 <= x <= button.centerX + button.width/2 and
+            button.centerY - button.height/2 <= y <= button.centerY + button.height/2)
 
 def onMouseMove(app, mouseX, mouseY):
     if app.startScreen:
@@ -395,10 +394,11 @@ def onMouseRelease(app, mouseX, mouseY):
         commitDraw(app, app.drawingPoints, app.brushSize, app.brushColor)
         app.drawingPoints = []
     app.draggingSlider = None
+    app.previewImage = None
 
 
 # This function below was helped by claude (Commit draw and commit edit)
-# Was used for refining code, structure and algorithm I implemented
+# Was used for refining code. Structure and algorithm I implemented
 def commitDraw(app, points, brushSize, color):
     photo = app.photo
 
@@ -458,10 +458,7 @@ def commitEdit(app, name, value):
                                sliderPositions))
     app.redoHistory = []
 
-
-
-
-    history = photo.editHistory
+    history = photo.editHistory # editName, value tuple list
     exisitingIndex = None
 
     # go through the edit history and see if that edit was already made

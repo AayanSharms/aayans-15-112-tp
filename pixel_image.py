@@ -151,10 +151,6 @@ def applyTemperature(destinationGrid, sourceGrid, val):
     return destinationGrid
 
 
-
-
-
-
 # ----- Exposure -------
 
 def applyExposure(destinationGrid, sourceGrid, EV): 
